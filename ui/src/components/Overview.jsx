@@ -1,11 +1,4 @@
-import React, { useState, useCallback } from 'react'
-import axios from 'axios'
-import TraceHeader from './TraceHeader.jsx'
-import StepTimeline from './StepTimeline.jsx'
-import StepDetail from './StepDetail.jsx'
-import PlanBreakdown from './PlanBreakdown.jsx'
-import FailureCard from './FailureCard.jsx'
-import ContextManifest from './ContextManifest.jsx'
+import React from 'react'
 
 function ScoreBar({ score, color }) {
   return (
@@ -30,87 +23,7 @@ function StatusChip({ score }) {
   return <span className="status-chip chip-fail">FAIL</span>
 }
 
-function TraceRow({ trace }) {
-  const [expanded, setExpanded] = useState(false)
-  const [detail, setDetail] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [selectedStep, setSelectedStep] = useState(null)
-
-  const toggle = useCallback(() => {
-    if (!expanded && !detail) {
-      setLoading(true)
-      axios.get(`/trace/${trace.trace_id}`)
-        .then(r => setDetail(r.data))
-        .catch(console.error)
-        .finally(() => setLoading(false))
-    }
-    setExpanded(e => !e)
-  }, [expanded, detail, trace.trace_id])
-
-  const t = trace
-  const stepResults = detail?.step_results || []
-  const fa = detail?.failure_attribution
-  const selectedStepResult = stepResults.find(sr => sr.step_number === selectedStep)
-
-  return (
-    <>
-      <tr onClick={toggle} style={{ cursor: 'pointer' }}>
-        <td style={{ fontWeight: 600, color: 'var(--blue)', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>{t.trace_id}</td>
-        <td style={{ color: 'var(--muted)', fontSize: 11 }}>{t.dataset_file}</td>
-        <td style={{ color: 'var(--muted)', fontSize: 11 }}>{t.user_prompt}</td>
-        <td><ScoreBar score={t.trajectory_score} color={scoreColor(t.trajectory_score)} /></td>
-        <td style={{ fontSize: 11, color: scoreColor(t.plan_score) }}>{t.plan_score?.toFixed(3)}</td>
-        <td style={{ fontSize: 11, color: scoreColor(t.avg_step_score) }}>{t.avg_step_score?.toFixed(3)}</td>
-        <td><StatusChip score={t.trajectory_score} /></td>
-        <td style={{ fontSize: 11, color: 'var(--muted)' }}>
-          {t.failure_transition_step
-            ? <span style={{ color: 'var(--red)' }}>Step {t.failure_transition_step} · {t.failure_type?.replace(/_/g,' ')}</span>
-            : t.step_completeness_failed
-              ? <span style={{ color: 'var(--red)' }}>Step completeness fail</span>
-              : <span style={{ color: 'var(--green)' }}>—</span>
-          }
-        </td>
-      </tr>
-      <tr className="trajectory-toggle-row">
-        <td colSpan={8} style={{ padding: 0, border: 'none' }}>
-          <div
-            className={`trajectory-toggle${expanded ? ' open' : ''}`}
-            onClick={toggle}
-          >
-            <span className="trajectory-toggle-arrow">{expanded ? '▼' : '▶'}</span>
-            <span className="trajectory-toggle-label">Trajectory</span>
-          </div>
-          {expanded && (
-            <div className="trajectory-dropdown">
-              {loading && (
-                <div style={{ padding: 20, color: 'var(--muted)', fontSize: 12 }}>Loading trajectory…</div>
-              )}
-              {detail && !loading && (
-                <div className="trajectory-content">
-                  <TraceHeader detail={detail} />
-                  <StepTimeline
-                    stepResults={stepResults}
-                    selectedStep={selectedStep}
-                    onSelectStep={setSelectedStep}
-                    failureAttribution={fa}
-                  />
-                  {selectedStepResult && <StepDetail stepResult={selectedStepResult} />}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-                    <PlanBreakdown planResult={detail.plan_result} />
-                  </div>
-                  {fa?.failure_transition_step && <FailureCard failureAttribution={fa} />}
-                  {detail.context_result && <ContextManifest contextResult={detail.context_result} />}
-                </div>
-              )}
-            </div>
-          )}
-        </td>
-      </tr>
-    </>
-  )
-}
-
-export default function Overview({ traces }) {
+export default function Overview({ traces, onSelect }) {
   if (!traces.length) {
     return (
       <div className="empty-state">
@@ -123,6 +36,7 @@ export default function Overview({ traces }) {
   const amber = 0
   const fail  = traces.filter(t => t.trajectory_score < 0.85).length
   const avg   = traces.reduce((s, t) => s + t.trajectory_score, 0) / traces.length
+  const failing = traces.filter(t => t.failure_transition_step)
 
   return (
     <>
@@ -172,14 +86,13 @@ export default function Overview({ traces }) {
         </div>
       </div>
 
-      {/* All traces table with expandable trajectory rows */}
+      {/* All traces table */}
       <div className="overview-table-card">
         <table className="overview-table">
           <thead>
             <tr>
               <th>Trace ID</th>
               <th>Dataset</th>
-              <th>Query Text</th>
               <th>Trajectory Score</th>
               <th>Plan</th>
               <th>Avg Steps</th>
@@ -189,7 +102,22 @@ export default function Overview({ traces }) {
           </thead>
           <tbody>
             {traces.map(t => (
-              <TraceRow key={t.trace_id} trace={t} />
+              <tr key={t.trace_id} onClick={() => onSelect(t.trace_id)}>
+                <td style={{ fontWeight: 600, color: 'var(--blue)', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>{t.trace_id}</td>
+                <td style={{ color: 'var(--muted)', fontSize: 11 }}>{t.dataset_file}</td>
+                <td><ScoreBar score={t.trajectory_score} color={scoreColor(t.trajectory_score)} /></td>
+                <td style={{ fontSize: 11, color: scoreColor(t.plan_score) }}>{t.plan_score?.toFixed(3)}</td>
+                <td style={{ fontSize: 11, color: scoreColor(t.avg_step_score) }}>{t.avg_step_score?.toFixed(3)}</td>
+                <td><StatusChip score={t.trajectory_score} /></td>
+                <td style={{ fontSize: 11, color: 'var(--muted)' }}>
+                  {t.failure_transition_step
+                    ? <span style={{ color: 'var(--red)' }}>Step {t.failure_transition_step} · {t.failure_type?.replace(/_/g,' ')}</span>
+                    : t.step_completeness_failed
+                      ? <span style={{ color: 'var(--red)' }}>Step completeness fail</span>
+                      : <span style={{ color: 'var(--green)' }}>—</span>
+                  }
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>

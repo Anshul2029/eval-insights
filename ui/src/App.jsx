@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import axios from 'axios'
+import Sidebar from './components/Sidebar.jsx'
 import Overview from './components/Overview.jsx'
+import TraceHeader from './components/TraceHeader.jsx'
+import PlanBreakdown from './components/PlanBreakdown.jsx'
+import StepTimeline from './components/StepTimeline.jsx'
+import StepDetail from './components/StepDetail.jsx'
+import FailureCard from './components/FailureCard.jsx'
+import ContextManifest from './components/ContextManifest.jsx'
 import ComparisonView from './components/ComparisonView.jsx'
 import EvalInsightsView from './components/EvalInsightsView.jsx'
 
@@ -9,9 +16,13 @@ export default function App() {
   const [mode, setMode] = useState('traces')          // 'traces' | 'comparisons' | 'insights'
   const [traces, setTraces] = useState([])
   const [loadingList, setLoadingList] = useState(true)
+  const [selectedId, setSelectedId] = useState(null)
+  const [detail, setDetail] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [selectedStep, setSelectedStep] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
-  const fileRef = useRef(null)
+  const stepDetailRef = useRef(null)
 
   // comparison state
   const [comparisons, setComparisons] = useState([])
@@ -43,6 +54,27 @@ export default function App() {
       .finally(() => setLoadingCmp(false))
   }, [selectedCmpId])
 
+  const selectTrace = useCallback((id) => {
+    if (id === selectedId) return
+    setSelectedId(id)
+    setDetail(null)
+    setSelectedStep(null)
+    setLoadingDetail(true)
+    axios.get(`/trace/${id}`)
+      .then(r => setDetail(r.data))
+      .catch(console.error)
+      .finally(() => setLoadingDetail(false))
+  }, [selectedId])
+
+  // Auto-scroll to StepDetail whenever a step is selected
+  useEffect(() => {
+    if (selectedStep !== null && stepDetailRef.current) {
+      setTimeout(() => {
+        stepDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 50)
+    }
+  }, [selectedStep])
+
   const uploadTrace = useCallback((file) => {
     setUploading(true)
     setUploadError(null)
@@ -50,22 +82,22 @@ export default function App() {
     form.append('file', file)
     axios.post('/evaluate', form, { headers: { 'Content-Type': 'multipart/form-data' } })
       .then(r => {
-        return loadTraceList().then(() => setLoadingList(false))
+        const newId = r.data.trace_id
+        return loadTraceList().then(() => {
+          setLoadingList(false)
+          selectTrace(newId)
+        })
       })
       .catch(err => {
         const msg = err.response?.data?.error || err.message || 'Upload failed'
         setUploadError(msg)
       })
       .finally(() => setUploading(false))
-  }, [])
+  }, [selectTrace])
 
-  function handleFileChange(e) {
-    const file = e.target.files?.[0]
-    if (file) {
-      uploadTrace(file)
-      e.target.value = ''
-    }
-  }
+  const stepResults = detail?.step_results || []
+  const fa = detail?.failure_attribution
+  const selectedStepResult = stepResults.find(sr => sr.step_number === selectedStep)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -88,30 +120,6 @@ export default function App() {
           ))}
         </div>
         <div className="topbar-spacer" />
-        {mode === 'traces' && (
-          <>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".json"
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
-            <button
-              className={`upload-btn topbar-upload${uploading ? ' uploading' : ''}`}
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              title="Upload a raw trace JSON to evaluate it"
-            >
-              {uploading ? 'Evaluating…' : 'Evaluate Trace'}
-            </button>
-            {uploadError && (
-              <span style={{ fontSize: 11, color: 'var(--red)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {uploadError}
-              </span>
-            )}
-          </>
-        )}
         {mode === 'traces' && traces.length > 0 && (
           <span className="topbar-badge">{traces.length} traces</span>
         )}
@@ -120,53 +128,56 @@ export default function App() {
         )}
       </div>
 
-      {/* ── Traces mode — full-width table with expandable dropdowns ── */}
-      {mode === 'traces' && (
-        <div className="traces-fullwidth">
-          {loadingList ? (
-            <div className="empty-state">Loading…</div>
-          ) : (
-            <Overview traces={traces} />
-          )}
-        </div>
-      )}
-
-      {/* ── Comparisons mode ── */}
-      <div className="app-shell" style={{ display: mode === 'comparisons' ? undefined : 'none' }}>
-        <aside className="sidebar">
-          <div className="sidebar-header">
-            <div className="sidebar-title">Comparisons</div>
-          </div>
-          <div className="sidebar-list">
-            {comparisons.length === 0 && (
-              <div style={{ padding: '20px 16px', color: 'var(--muted)', fontSize: 12 }}>
-                No comparisons yet.<br />Run:<br />
-                <code style={{ fontSize: 10 }}>python run_comparison.py trace_002</code>
-              </div>
-            )}
-            {comparisons.map(c => (
-              <div key={c.comparison_id}
-                className={`trace-item${selectedCmpId === c.comparison_id ? ' active' : ''}`}
-                onClick={() => selectComparison(c.comparison_id)}>
-                <div className="trace-info">
-                  <div className="trace-id-text">{c.comparison_id}</div>
-                  <div className="trace-file-text">{c.llms_compared?.join(' vs ')}</div>
-                  <div className="trace-pills">
-                    {c.llms_compared?.map(llm => (
-                      <span key={llm} className="pill" style={{ background: '#3b82f622', color: '#60a5fa' }}>
-                        {llm} {c.scores?.[llm]?.total_tokens?.toLocaleString()}t
-                      </span>
-                    ))}
+      <div className="app-shell" style={{ display: mode === 'insights' ? 'none' : undefined }}>
+        {mode === 'comparisons' ? (
+          /* ── Comparisons sidebar ── */
+          <aside className="sidebar">
+            <div className="sidebar-header">
+              <div className="sidebar-title">Comparisons</div>
+            </div>
+            <div className="sidebar-list">
+              {comparisons.length === 0 && (
+                <div style={{ padding: '20px 16px', color: 'var(--muted)', fontSize: 12 }}>
+                  No comparisons yet.<br />Run:<br />
+                  <code style={{ fontSize: 10 }}>python run_comparison.py trace_002</code>
+                </div>
+              )}
+              {comparisons.map(c => (
+                <div key={c.comparison_id}
+                  className={`trace-item${selectedCmpId === c.comparison_id ? ' active' : ''}`}
+                  onClick={() => selectComparison(c.comparison_id)}>
+                  <div className="trace-info">
+                    <div className="trace-id-text">{c.comparison_id}</div>
+                    <div className="trace-file-text">{c.llms_compared?.join(' vs ')}</div>
+                    <div className="trace-pills">
+                      {c.llms_compared?.map(llm => (
+                        <span key={llm} className="pill" style={{ background: '#3b82f622', color: '#60a5fa' }}>
+                          {llm} {c.scores?.[llm]?.total_tokens?.toLocaleString()}t
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </aside>
+              ))}
+            </div>
+          </aside>
+        ) : (
+          <Sidebar
+            traces={traces}
+            selectedId={selectedId}
+            onSelect={selectTrace}
+            loading={loadingList}
+            onUpload={uploadTrace}
+            uploading={uploading}
+            uploadError={uploadError}
+          />
+        )}
 
         <div className="main-wrap">
           <div className="main-panel">
-            {!selectedCmpId && (
+
+            {/* ── Comparisons mode ── */}
+            {mode === 'comparisons' && !selectedCmpId && (
               <div className="empty-state">
                 Select a comparison from the sidebar.<br />
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -174,16 +185,50 @@ export default function App() {
                 </span>
               </div>
             )}
-            {loadingCmp && (
+            {mode === 'comparisons' && loadingCmp && (
               <div className="empty-state">Loading comparison…</div>
             )}
-            {cmpDetail && !loadingCmp && (
+            {mode === 'comparisons' && cmpDetail && !loadingCmp && (
               <ComparisonView data={cmpDetail} />
             )}
+
+            {/* ── Traces mode ── */}
+            {mode === 'traces' && !selectedId && !loadingList && (
+              <Overview traces={traces} onSelect={selectTrace} />
+            )}
+            {mode === 'traces' && loadingDetail && (
+              <div className="empty-state">Loading trace…</div>
+            )}
+            {mode === 'traces' && detail && !loadingDetail && (
+              <>
+                <TraceHeader detail={detail} />
+                <StepTimeline
+                  stepResults={stepResults}
+                  selectedStep={selectedStep}
+                  onSelectStep={setSelectedStep}
+                  failureAttribution={fa}
+                />
+                <div ref={stepDetailRef}>
+                  {selectedStepResult
+                    ? <StepDetail stepResult={selectedStepResult} />
+                    : (
+                      <div className="step-detail-placeholder">
+                        Select a step card above to see its rubric criteria, scores, grader rationale, and agent trajectory
+                      </div>
+                    )
+                  }
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <PlanBreakdown planResult={detail.plan_result} />
+                </div>
+                {fa?.failure_transition_step && <FailureCard failureAttribution={fa} />}
+                {detail.context_result && <ContextManifest contextResult={detail.context_result} />}
+              </>
+            )}
+
           </div>
         </div>
       </div>
-
       <div className="insights-wrap" style={{ display: mode === 'insights' ? 'flex' : 'none' }}>
         <EvalInsightsView />
       </div>
