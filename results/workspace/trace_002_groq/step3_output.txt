@@ -1,0 +1,2 @@
+handoff_complete: true
+Keys saved: ['Month', 'Region', 'Product', 'Value', 'Z-Score', 'Key Findings']

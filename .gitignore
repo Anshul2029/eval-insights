@@ -5,7 +5,6 @@ __pycache__/
 
 # Node
 ui/node_modules/
-ui/dist/
 
 # Caches
 eval_insights/.cache/
@@ -15,7 +14,9 @@ temp_excel/
 temp_raw_traces/
 temp_real_reports/
 temp_reports/
-results/
+
+# Result backups (keep main results and comparisons)
+results/*_backup*.json
 
 # OS
 .DS_Store

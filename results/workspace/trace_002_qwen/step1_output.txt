@@ -1,0 +1,5 @@
+row_count: 216
+columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']
+dtypes: {'Month': 'str', 'Region': 'str', 'Product': 'str', 'Revenue': 'int64', 'Units_Sold': 'int64'}
+missing_values: 0
+duplicates: 0

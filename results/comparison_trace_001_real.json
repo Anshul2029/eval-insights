@@ -1,0 +1,969 @@
+{
+  "comparison_id": "trace_001_real",
+  "mode": "REAL_EXECUTION",
+  "generated_at": "2026-05-07T06:22:32.426030+00:00",
+  "llms_compared": [
+    "groq",
+    "qwen"
+  ],
+  "groq": {
+    "llm_model": "llama-3.3-70b-versatile",
+    "execution_mode": "REAL",
+    "word_doc_path": "temp_real_reports/report_trace_001_groq.docx",
+    "token_usage": {
+      "llm": "groq",
+      "llm_model": "llama-3.3-70b-versatile",
+      "per_step": [
+        {
+          "step_number": 0,
+          "action_type": "planning",
+          "input_tokens": 90,
+          "output_tokens": 42,
+          "thinking_tokens": 0,
+          "total_tokens": 132,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 1,
+          "action_type": "data_parsing",
+          "input_tokens": 113,
+          "output_tokens": 112,
+          "thinking_tokens": 0,
+          "total_tokens": 225,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 2,
+          "action_type": "computation",
+          "input_tokens": 173,
+          "output_tokens": 160,
+          "thinking_tokens": 0,
+          "total_tokens": 333,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 3,
+          "action_type": "context_handoff",
+          "input_tokens": 218,
+          "output_tokens": 307,
+          "thinking_tokens": 0,
+          "total_tokens": 525,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 4,
+          "action_type": "report_structuring",
+          "input_tokens": 234,
+          "output_tokens": 400,
+          "thinking_tokens": 0,
+          "total_tokens": 634,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 5,
+          "action_type": "narrative_generation",
+          "input_tokens": 396,
+          "output_tokens": 461,
+          "thinking_tokens": 0,
+          "total_tokens": 857,
+          "cached_tokens": 0
+        }
+      ],
+      "total": {
+        "input_tokens": 1224,
+        "output_tokens": 1482,
+        "thinking_tokens": 0,
+        "total_tokens": 2706,
+        "cached_tokens": 0
+      }
+    },
+    "token_rationale": {
+      "0": {
+        "reason": "Planning step",
+        "rationale": {
+          "system_len": 75,
+          "user_len": 179,
+          "model": "llama-3.3-70b-versatile"
+        }
+      },
+      "1": {
+        "reason": "LLM validation of actual data statistics",
+        "data_points": "216 rows \u00d7 5 cols analyzed",
+        "rationale": {
+          "system_len": 53,
+          "user_len": 253,
+          "model": "llama-3.3-70b-versatile"
+        }
+      },
+      "2": {
+        "reason": "LLM interpretation of real statistical analysis",
+        "computation": "5 columns analyzed, 8 anomalies",
+        "rationale": {
+          "system_len": 53,
+          "user_len": 369,
+          "model": "llama-3.3-70b-versatile"
+        }
+      },
+      "3": {
+        "reason": "LLM preparation of context for Word document",
+        "facts_handled": 8,
+        "rationale": {
+          "system_len": 71,
+          "user_len": 490,
+          "model": "llama-3.3-70b-versatile"
+        }
+      },
+      "4": {
+        "reason": "LLM design of Word report structure",
+        "sections_designed": 4,
+        "rationale": {
+          "system_len": 62,
+          "user_len": 595,
+          "model": "llama-3.3-70b-versatile"
+        }
+      },
+      "5": {
+        "reason": "LLM narrative generation for actual Word document",
+        "document_generated": true,
+        "rationale": {
+          "system_len": 69,
+          "user_len": 1113,
+          "model": "llama-3.3-70b-versatile"
+        }
+      }
+    },
+    "trajectory_score": 0.8162,
+    "plan_score": 0.9475,
+    "avg_step_score": 0.76,
+    "failure_attribution": {
+      "failure_transition_step": 3,
+      "root_cause_app": "Excel\u2192Word",
+      "root_cause_action": "context_handoff",
+      "failure_type": "context_loss",
+      "fix_recommendation": "Fix Excel->Word connector -- serialisation or handoff dropped facts",
+      "contaminated_steps": []
+    },
+    "step_results": [
+      {
+        "step_number": 1,
+        "app": "Excel",
+        "action_type": "data_parsing",
+        "step": {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "pandas.read_excel"
+          ],
+          "output": "Loaded 216 rows with 5 columns. Validation: passed",
+          "what_agent_did": "Actually loaded Excel file, computed row count, column names, missing values, duplicates",
+          "key_facts_produced": [
+            "row_count: 216",
+            "columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']",
+            "missing_values: 0",
+            "duplicate_rows: 0",
+            "dtypes: {'Month': dtype('float64'), 'Region': dtype('float64'), 'Product': dtype('float64'), 'Revenue': dtype('float64'), 'Units_Sold': dtype('float64')}"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: <think>\nOkay, let's tackle this evaluation. The user wants three specific criteria for the step where the AI agent parsed an Excel file. The step output shows that the agent loaded 216 rows with 5 col",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Correct row count, columns validated, no missing values"
+            }
+          ],
+          "step_score": 1.0,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 2,
+        "app": "Excel",
+        "action_type": "computation",
+        "step": {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "pandas groupby",
+            "numpy z-score"
+          ],
+          "output": "Analyzed 5 numeric cols, found 8 anomalies. Severity: low",
+          "what_agent_did": "Actually computed statistics, z-scores, detected real anomalies using numpy",
+          "key_facts_produced": [
+            "total_rows_analyzed: 216",
+            "numeric_columns: 5",
+            "anomalies_detected: 8",
+            "Month_idx96: z-score=2.76, value=2.886519144291699",
+            "Region_idx155: z-score=2.57, value=2.6306675302618348",
+            "Product_idx48: z-score=3.06, value=-2.904534455119683",
+            "Product_idx87: z-score=2.58, value=-2.4455112964017247",
+            "Product_idx137: z-score=2.85, value=2.691708175782772"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: <think>\nOkay, let's tackle this evaluation. The user wants three specific criteria for the AI agent's step. The step involved using Excel to compute stats, z-scores, and detect anomalies. The dataset ",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 3,
+        "app": "Excel\u2192Word",
+        "action_type": "context_handoff",
+        "step": {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx Document"
+          ],
+          "output": "Prepared 8 facts for Word document",
+          "what_agent_did": "Reviewed and validated facts for document integration",
+          "key_facts_produced": [
+            "facts_prepared: 8",
+            "context_ready: true"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: {\n  \"criteria\": [\n    {\n      \"id\": \"C1\",\n      \"description\": \"All 8 prepared facts are relevant to sales data analysis\",\n      \"rationale\": \"The dataset is sales data, so facts must directly relate ",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": false,
+              "score": 0.0,
+              "rationale": "No evidence provided about the content/relevance of the 8 prepared facts"
+            }
+          ],
+          "step_score": 0.0,
+          "step_pass": false,
+          "failure_type": "context_loss",
+          "_model": "qwen/qwen3-32b"
+        }
+      },
+      {
+        "step_number": 4,
+        "app": "Word",
+        "action_type": "report_structuring",
+        "step": {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx Document, add_heading"
+          ],
+          "output": "Structured report with 4 sections",
+          "what_agent_did": "Designed document structure with LLM input",
+          "key_facts_produced": [
+            "sections: 4",
+            "section_names: ['Executive Summary', 'Analysis', 'Anomalies', 'Recommendations']"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: {\n  \"criteria\": [\n    {\n      \"id\": \"C1\",\n      \"description\": \"Anomalies section included despite no ground truth anomalies\",\n      \"rationale\": \"Report structure must include 'Anomalies' section eve",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Anomalies section included in report structure despite no data parsing errors or missing values in prior step"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "qwen/qwen3-32b"
+        }
+      },
+      {
+        "step_number": 5,
+        "app": "Word",
+        "action_type": "narrative_generation",
+        "step": {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx paragraph formatting"
+          ],
+          "output": "Generated real Word document: temp_real_reports/report_trace_001_groq.docx",
+          "what_agent_did": "Generated actual Word document with real narrative content",
+          "key_facts_produced": [
+            "word_document_generated: true",
+            "file_path: temp_real_reports/report_trace_001_groq.docx"
+          ],
+          "word_doc_path": "temp_real_reports/report_trace_001_groq.docx"
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: {\n  \"criteria\": [\n    {\n      \"id\": \"C1\",\n      \"description\": \"Word document exists at specified file path\",\n      \"rationale\": \"Verifies successful document creation as the primary output requiremen",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Word document exists at temp_real_reports/report_trace_001_groq.docx as confirmed by output"
+            }
+          ],
+          "step_score": 1.0,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "qwen/qwen3-32b"
+        }
+      }
+    ],
+    "trace": {
+      "trace_id": "trace_001_groq_real",
+      "llm": "groq",
+      "llm_model": "llama-3.3-70b-versatile",
+      "source_trace_id": "trace_001",
+      "run_date": "2026-05-07T06:18:06.308386+00:00",
+      "dataset_file": "01_clean_baseline.xlsx",
+      "user_prompt": "Analyse this sales data and create a Word report for leadership",
+      "agent_plan": "I will load the 01_clean_baseline.xlsx dataset, perform exploratory data analysis, create visualizations, and generate a Word report summarizing key sales trends and insights for leadership.",
+      "execution_mode": "REAL",
+      "source_data_summary": {
+        "rows": 216,
+        "columns": [
+          "Month",
+          "Region",
+          "Product",
+          "Revenue",
+          "Units_Sold"
+        ],
+        "ground_truth": "No planted anomaly. Organic outliers present: South/Product_B Mar (z=-2.84), South/Product_E Aug (z=-2.94), North/Product_B Nov (z=+2.36), North/Product_C Dec (z=+2.36), South/Product_D Jul (z=+2.06)"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "pandas.read_excel"
+          ],
+          "output": "Loaded 216 rows with 5 columns. Validation: passed",
+          "what_agent_did": "Actually loaded Excel file, computed row count, column names, missing values, duplicates",
+          "key_facts_produced": [
+            "row_count: 216",
+            "columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']",
+            "missing_values: 0",
+            "duplicate_rows: 0",
+            "dtypes: {'Month': dtype('float64'), 'Region': dtype('float64'), 'Product': dtype('float64'), 'Revenue': dtype('float64'), 'Units_Sold': dtype('float64')}"
+          ]
+        },
+        {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "pandas groupby",
+            "numpy z-score"
+          ],
+          "output": "Analyzed 5 numeric cols, found 8 anomalies. Severity: low",
+          "what_agent_did": "Actually computed statistics, z-scores, detected real anomalies using numpy",
+          "key_facts_produced": [
+            "total_rows_analyzed: 216",
+            "numeric_columns: 5",
+            "anomalies_detected: 8",
+            "Month_idx96: z-score=2.76, value=2.886519144291699",
+            "Region_idx155: z-score=2.57, value=2.6306675302618348",
+            "Product_idx48: z-score=3.06, value=-2.904534455119683",
+            "Product_idx87: z-score=2.58, value=-2.4455112964017247",
+            "Product_idx137: z-score=2.85, value=2.691708175782772"
+          ]
+        },
+        {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx Document"
+          ],
+          "output": "Prepared 8 facts for Word document",
+          "what_agent_did": "Reviewed and validated facts for document integration",
+          "key_facts_produced": [
+            "facts_prepared: 8",
+            "context_ready: true"
+          ]
+        },
+        {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx Document, add_heading"
+          ],
+          "output": "Structured report with 4 sections",
+          "what_agent_did": "Designed document structure with LLM input",
+          "key_facts_produced": [
+            "sections: 4",
+            "section_names: ['Executive Summary', 'Analysis', 'Anomalies', 'Recommendations']"
+          ]
+        },
+        {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx paragraph formatting"
+          ],
+          "output": "Generated real Word document: temp_real_reports/report_trace_001_groq.docx",
+          "what_agent_did": "Generated actual Word document with real narrative content",
+          "key_facts_produced": [
+            "word_document_generated: true",
+            "file_path: temp_real_reports/report_trace_001_groq.docx"
+          ],
+          "word_doc_path": "temp_real_reports/report_trace_001_groq.docx"
+        }
+      ],
+      "word_doc_path": "temp_real_reports/report_trace_001_groq.docx"
+    }
+  },
+  "qwen": {
+    "llm_model": "qwen/qwen3-32b",
+    "execution_mode": "REAL",
+    "word_doc_path": "temp_real_reports/report_trace_001_qwen.docx",
+    "token_usage": {
+      "llm": "qwen",
+      "llm_model": "qwen/qwen3-32b",
+      "per_step": [
+        {
+          "step_number": 0,
+          "action_type": "planning",
+          "input_tokens": 69,
+          "output_tokens": 571,
+          "thinking_tokens": 0,
+          "total_tokens": 640,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 1,
+          "action_type": "data_parsing",
+          "input_tokens": 93,
+          "output_tokens": 391,
+          "thinking_tokens": 0,
+          "total_tokens": 484,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 2,
+          "action_type": "computation",
+          "input_tokens": 190,
+          "output_tokens": 523,
+          "thinking_tokens": 0,
+          "total_tokens": 713,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 3,
+          "action_type": "context_handoff",
+          "input_tokens": 259,
+          "output_tokens": 2048,
+          "thinking_tokens": 0,
+          "total_tokens": 2307,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 4,
+          "action_type": "report_structuring",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "thinking_tokens": 0,
+          "total_tokens": 0,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 5,
+          "action_type": "narrative_generation",
+          "input_tokens": 444,
+          "output_tokens": 946,
+          "thinking_tokens": 0,
+          "total_tokens": 1390,
+          "cached_tokens": 0
+        }
+      ],
+      "total": {
+        "input_tokens": 1055,
+        "output_tokens": 4479,
+        "thinking_tokens": 0,
+        "total_tokens": 5534,
+        "cached_tokens": 0
+      }
+    },
+    "token_rationale": {
+      "0": {
+        "reason": "Planning step",
+        "rationale": {
+          "system_len": 75,
+          "user_len": 179,
+          "model": "qwen/qwen3-32b"
+        }
+      },
+      "1": {
+        "reason": "LLM validation of actual data statistics",
+        "data_points": "216 rows \u00d7 5 cols analyzed",
+        "rationale": {
+          "system_len": 53,
+          "user_len": 253,
+          "model": "qwen/qwen3-32b"
+        }
+      },
+      "2": {
+        "reason": "LLM interpretation of real statistical analysis",
+        "computation": "5 columns analyzed, 8 anomalies",
+        "rationale": {
+          "system_len": 53,
+          "user_len": 368,
+          "model": "qwen/qwen3-32b"
+        }
+      },
+      "3": {
+        "reason": "LLM preparation of context for Word document",
+        "facts_handled": 4,
+        "rationale": {
+          "system_len": 71,
+          "user_len": 487,
+          "model": "qwen/qwen3-32b"
+        }
+      },
+      "4": {
+        "reason": "LLM design of Word report structure",
+        "sections_designed": 4,
+        "rationale": {}
+      },
+      "5": {
+        "reason": "LLM narrative generation for actual Word document",
+        "document_generated": true,
+        "rationale": {
+          "system_len": 69,
+          "user_len": 1110,
+          "model": "qwen/qwen3-32b"
+        }
+      }
+    },
+    "trajectory_score": 0.8302,
+    "plan_score": 0.9475,
+    "avg_step_score": 0.78,
+    "failure_attribution": {
+      "failure_transition_step": 1,
+      "root_cause_app": "Excel",
+      "root_cause_action": "data_parsing",
+      "failure_type": "parsing_error",
+      "fix_recommendation": "Fix data parsing -- column detection or type handling",
+      "contaminated_steps": []
+    },
+    "step_results": [
+      {
+        "step_number": 1,
+        "app": "Excel",
+        "action_type": "data_parsing",
+        "step": {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "pandas.read_excel"
+          ],
+          "output": "Loaded 216 rows with 5 columns. Validation: passed",
+          "what_agent_did": "Actually loaded Excel file, computed row count, column names, missing values, duplicates",
+          "key_facts_produced": [
+            "row_count: 216",
+            "columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']",
+            "missing_values: 0",
+            "duplicate_rows: 0",
+            "dtypes: {'Month': dtype('float64'), 'Region': dtype('float64'), 'Product': dtype('float64'), 'Revenue': dtype('float64'), 'Units_Sold': dtype('float64')}"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: <think>\nOkay, let's tackle this. The user wants me to evaluate the first step of an AI agent's workflow. The step involves loading an Excel file and performing some data parsing. The dataset is 01_cle",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": false,
+              "score": 0.3,
+              "rationale": "Data types for categorical columns (Month, Region, Product) are incorrectly parsed as float64 instead of string/object types, indicating parsing failure"
+            }
+          ],
+          "step_score": 0.3,
+          "step_pass": false,
+          "failure_type": "parsing_error",
+          "_model": "qwen/qwen3-32b"
+        }
+      },
+      {
+        "step_number": 2,
+        "app": "Excel",
+        "action_type": "computation",
+        "step": {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "pandas groupby",
+            "numpy z-score"
+          ],
+          "output": "Analyzed 5 numeric cols, found 8 anomalies. Severity: medium",
+          "what_agent_did": "Actually computed statistics, z-scores, detected real anomalies using numpy",
+          "key_facts_produced": [
+            "total_rows_analyzed: 216",
+            "numeric_columns: 5",
+            "anomalies_detected: 8",
+            "Month_idx31: z-score=2.50, value=-2.4521568631024966",
+            "Month_idx71: z-score=2.69, value=-2.6303431065616243",
+            "Month_idx86: z-score=2.64, value=-2.586740916056663",
+            "Region_idx153: z-score=3.14, value=3.251832904515485",
+            "Product_idx53: z-score=2.54, value=-2.435934022794192"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: <think>\nOkay, let's tackle this. The user wants me to evaluate step 2 of the AI agent's workflow. The step involved using Excel to compute statistics, z-scores, and detect anomalies with numpy. The ou",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 3,
+        "app": "Excel\u2192Word",
+        "action_type": "context_handoff",
+        "step": {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx Document"
+          ],
+          "output": "Prepared 4 facts for Word document",
+          "what_agent_did": "Reviewed and validated facts for document integration",
+          "key_facts_produced": [
+            "facts_prepared: 4",
+            "context_ready: true"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: <think>\nOkay, let's tackle this. The user wants me to evaluate step 3 of the AI agent's workflow. The step is a context_handoff from Excel to Word, where the agent reviewed and validated facts for the",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 4,
+        "app": "Word",
+        "action_type": "report_structuring",
+        "step": {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx Document, add_heading"
+          ],
+          "output": "Structured report with 4 sections",
+          "what_agent_did": "Designed document structure with LLM input",
+          "key_facts_produced": [
+            "sections: 4",
+            "section_names: ['Executive Summary', 'Analysis', 'Anomalies', 'Recommendations']"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: <think>\nOkay, let's tackle this. The user wants me to evaluate step 4 of the AI agent's process. The step involves structuring a Word report with four sections based on LLM input. The dataset is a cle",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 5,
+        "app": "Word",
+        "action_type": "narrative_generation",
+        "step": {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx paragraph formatting"
+          ],
+          "output": "Generated real Word document: temp_real_reports/report_trace_001_qwen.docx",
+          "what_agent_did": "Generated actual Word document with real narrative content",
+          "key_facts_produced": [
+            "word_document_generated: true",
+            "file_path: temp_real_reports/report_trace_001_qwen.docx"
+          ],
+          "word_doc_path": "temp_real_reports/report_trace_001_qwen.docx"
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Rubric parse failed \u2014 raw: {\n  \"criteria\": [\n    {\n      \"id\": \"C1\",\n      \"description\": \"Word document exists at specified file path with non-zero size\",\n      \"rationale\": \"Verifies the agent successfully created a tangible ",
+              "rationale": "JSON parse error"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      }
+    ],
+    "trace": {
+      "trace_id": "trace_001_qwen_real",
+      "llm": "qwen",
+      "llm_model": "qwen/qwen3-32b",
+      "source_trace_id": "trace_001",
+      "run_date": "2026-05-07T06:20:17.646981+00:00",
+      "dataset_file": "01_clean_baseline.xlsx",
+      "user_prompt": "Analyse this sales data and create a Word report for leadership",
+      "agent_plan": "Load the sales data from 01_clean_baseline.xlsx, perform exploratory data analysis to identify key trends, metrics, and insights, then structure findings into a clear, visual Word report for leadership with summaries, charts, and actionable recommendations.",
+      "execution_mode": "REAL",
+      "source_data_summary": {
+        "rows": 216,
+        "columns": [
+          "Month",
+          "Region",
+          "Product",
+          "Revenue",
+          "Units_Sold"
+        ],
+        "ground_truth": "No planted anomaly. Organic outliers present: South/Product_B Mar (z=-2.84), South/Product_E Aug (z=-2.94), North/Product_B Nov (z=+2.36), North/Product_C Dec (z=+2.36), South/Product_D Jul (z=+2.06)"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "pandas.read_excel"
+          ],
+          "output": "Loaded 216 rows with 5 columns. Validation: passed",
+          "what_agent_did": "Actually loaded Excel file, computed row count, column names, missing values, duplicates",
+          "key_facts_produced": [
+            "row_count: 216",
+            "columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']",
+            "missing_values: 0",
+            "duplicate_rows: 0",
+            "dtypes: {'Month': dtype('float64'), 'Region': dtype('float64'), 'Product': dtype('float64'), 'Revenue': dtype('float64'), 'Units_Sold': dtype('float64')}"
+          ]
+        },
+        {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "pandas groupby",
+            "numpy z-score"
+          ],
+          "output": "Analyzed 5 numeric cols, found 8 anomalies. Severity: medium",
+          "what_agent_did": "Actually computed statistics, z-scores, detected real anomalies using numpy",
+          "key_facts_produced": [
+            "total_rows_analyzed: 216",
+            "numeric_columns: 5",
+            "anomalies_detected: 8",
+            "Month_idx31: z-score=2.50, value=-2.4521568631024966",
+            "Month_idx71: z-score=2.69, value=-2.6303431065616243",
+            "Month_idx86: z-score=2.64, value=-2.586740916056663",
+            "Region_idx153: z-score=3.14, value=3.251832904515485",
+            "Product_idx53: z-score=2.54, value=-2.435934022794192"
+          ]
+        },
+        {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx Document"
+          ],
+          "output": "Prepared 4 facts for Word document",
+          "what_agent_did": "Reviewed and validated facts for document integration",
+          "key_facts_produced": [
+            "facts_prepared: 4",
+            "context_ready: true"
+          ]
+        },
+        {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx Document, add_heading"
+          ],
+          "output": "Structured report with 4 sections",
+          "what_agent_did": "Designed document structure with LLM input",
+          "key_facts_produced": [
+            "sections: 4",
+            "section_names: ['Executive Summary', 'Analysis', 'Anomalies', 'Recommendations']"
+          ]
+        },
+        {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real_execution",
+          "tools_called": [
+            "python-docx paragraph formatting"
+          ],
+          "output": "Generated real Word document: temp_real_reports/report_trace_001_qwen.docx",
+          "what_agent_did": "Generated actual Word document with real narrative content",
+          "key_facts_produced": [
+            "word_document_generated: true",
+            "file_path: temp_real_reports/report_trace_001_qwen.docx"
+          ],
+          "word_doc_path": "temp_real_reports/report_trace_001_qwen.docx"
+        }
+      ],
+      "word_doc_path": "temp_real_reports/report_trace_001_qwen.docx"
+    }
+  }
+}

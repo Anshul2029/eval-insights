@@ -1,0 +1,24 @@
+{
+    "Month": "Mar",
+    "Region": "South",
+    "Product": "Product_B",
+    "Value": 22216,
+    "Z-Score": -2.854842608479817,
+    "Key Findings": {
+        "Total Revenue": 8330077,
+        "Total Units": 33157,
+        "Regional Breakdown": {
+            "North": 2951623,
+            "South": 2550052,
+            "West": 2828402
+        },
+        "Product Breakdown": {
+            "Product_A": 1674467,
+            "Product_B": 1555409,
+            "Product_C": 1300974,
+            "Product_D": 1143307,
+            "Product_E": 1386319,
+            "Product_F": 1269601
+        }
+    }
+}

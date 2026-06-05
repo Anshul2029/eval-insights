@@ -1,0 +1,1384 @@
+{
+  "comparison_id": "trace_001",
+  "generated_at": "2026-05-07T09:06:00.443851+00:00",
+  "llms_compared": [
+    "groq",
+    "qwen"
+  ],
+  "groq": {
+    "llm_model": "llama-3.3-70b-versatile",
+    "token_usage": {
+      "llm": "groq",
+      "llm_model": "llama-3.3-70b-versatile",
+      "per_step": [
+        {
+          "step_number": 0,
+          "action_type": "planning",
+          "input_tokens": 422,
+          "output_tokens": 56,
+          "thinking_tokens": 0,
+          "total_tokens": 478,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 1,
+          "action_type": "data_parsing",
+          "input_tokens": 3138,
+          "output_tokens": 306,
+          "thinking_tokens": 0,
+          "total_tokens": 3444,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 2,
+          "action_type": "computation",
+          "input_tokens": 1147,
+          "output_tokens": 500,
+          "thinking_tokens": 0,
+          "total_tokens": 1647,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 3,
+          "action_type": "context_handoff",
+          "input_tokens": 1784,
+          "output_tokens": 479,
+          "thinking_tokens": 0,
+          "total_tokens": 2263,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 4,
+          "action_type": "report_structuring",
+          "input_tokens": 507,
+          "output_tokens": 272,
+          "thinking_tokens": 0,
+          "total_tokens": 779,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 5,
+          "action_type": "narrative_generation",
+          "input_tokens": 1078,
+          "output_tokens": 577,
+          "thinking_tokens": 0,
+          "total_tokens": 1655,
+          "cached_tokens": 0
+        }
+      ],
+      "total": {
+        "input_tokens": 8076,
+        "output_tokens": 2190,
+        "thinking_tokens": 0,
+        "total_tokens": 10266,
+        "cached_tokens": 0
+      }
+    },
+    "trajectory_score": 0.9557,
+    "plan_score": 1.0,
+    "avg_step_score": 0.9367,
+    "failure_attribution": {
+      "failure_transition_step": null,
+      "root_cause_app": null,
+      "root_cause_action": null,
+      "failure_type": null,
+      "fix_recommendation": null,
+      "contaminated_steps": []
+    },
+    "step_results": [
+      {
+        "step_number": 1,
+        "app": "Excel",
+        "action_type": "data_parsing",
+        "step": {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real pandas",
+          "tools_called": [
+            "pandas.read_excel",
+            "df.describe",
+            "df.isnull",
+            "df.duplicated",
+            "df.dtypes"
+          ],
+          "output": "The dataset consists of 216 rows and 5 columns, with column types including strings for Month, Region, and Product, and integers for Revenue and Units_Sold. The data is of high quality, with no missing values and no duplicate rows. The Revenue ranges from 20,000 to 54,884, while Units_Sold ranges from 95 to 209. Overall, the dataset provides a comprehensive overview of sales data across different regions and products.",
+          "what_agent_did": "Loaded Excel with pandas.read_excel, validated schema, computed descriptive statistics, checked for nulls and duplicates",
+          "key_facts_produced": [
+            "row_count: 216",
+            "columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']",
+            "missing_values: 0",
+            "duplicate_rows: 0",
+            "dtypes: {'Month': 'str', 'Region': 'str', 'Product': 'str', 'Revenue': 'int64', 'Units_Sold': 'int64'}",
+            "Revenue_mean: 38582.69, std: 6447.36, min: 20000, max: 54884",
+            "Units_Sold_mean: 153.69, std: 22.75, min: 95, max: 209"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Correctly reported zero missing values and zero duplicate rows in the dataset",
+              "rationale": "The ground truth confirms no missing values or duplicates exist, and the agent's output must align with this factual state without fabricating anomalies."
+            },
+            {
+              "id": "C2",
+              "description": "Accurately listed all column names and their corresponding data types as specified in the dataset schema",
+              "rationale": "The schema validation step requires precise identification of columns ('Month', 'Region', 'Product', 'Revenue', 'Units_Sold') and their data types (str, int64) to ensure downstream analysis integrity."
+            },
+            {
+              "id": "C3",
+              "description": "Computed and reported correct descriptive statistics for Revenue and Units_Sold (mean, std, min, max) matching the dataset's actual values",
+              "rationale": "Statistical accuracy is critical for reliable reporting; discrepancies here would invalidate the dataset's summary and mislead leadership analysis."
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Reported 0 missing values and 0 duplicate rows as confirmed in key facts"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Correctly listed columns and dtypes: ['Month','Region','Product','Revenue','Units_Sold'] with str/int64 types"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "All statistics (mean=38582.69, std=6447.36, min=20000, max=54884 for Revenue; mean=153.69, std=22.75, min=95, max=209 for Units_Sold) match key facts"
+            }
+          ],
+          "step_score": 1.0,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "qwen/qwen3-32b"
+        }
+      },
+      {
+        "step_number": 2,
+        "app": "Excel",
+        "action_type": "computation",
+        "step": {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real scipy",
+          "tools_called": [
+            "scipy.stats.zscore",
+            "pandas.groupby",
+            "numpy.abs",
+            "df.describe"
+          ],
+          "output": "Total revenue is $8,333,861, with the North region generating the most revenue at $2,951,623. There are 14 anomalies detected, with the most severe being a revenue anomaly of $20,000 in August in the South region for Product E, with a z-score of -2.889. The top products by revenue are Product A, Product B, and Product E, with revenues of $1,674,467, $1,559,193, and $1,386,319 respectively.",
+          "what_agent_did": "Ran scipy.stats.zscore on all numeric columns, computed groupby aggregations by Region, Product and Month",
+          "key_facts_produced": [
+            "total_revenue: 8,333,861",
+            "total_units: 33,196",
+            "anomaly_count: 14",
+            "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "revenue_North: 2,951,623",
+            "revenue_West: 2,828,402",
+            "revenue_South: 2,553,836"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must compute the correct total revenue and key KPIs (best/worst month, regional shares)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must perform anomaly detection at Region x Product x Month granularity, not just aggregate level",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must NOT fabricate anomalies on clean data; correct verdict is 'no significant anomalies'",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.85,
+              "rationale": "No explicit false-positive flag in key_facts; assuming clean"
+            }
+          ],
+          "step_score": 0.8833,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 3,
+        "app": "Excel\u2192Word",
+        "action_type": "context_handoff",
+        "step": {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "json.dumps"
+          ],
+          "output": "Packaged 12 Step-2 facts and 14 anomaly records into Word document context",
+          "what_agent_did": "Serialised all KPIs, regional breakdowns, product breakdowns, monthly trends and anomaly table into Word builder context",
+          "key_facts_produced": [
+            "passed: total_revenue: 8,333,861",
+            "passed: total_units: 33,196",
+            "passed: anomaly_count: 14",
+            "passed: anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "passed: anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "passed: anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "passed: anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "passed: anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "passed: anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "passed: revenue_North: 2,951,623",
+            "passed: revenue_West: 2,828,402",
+            "passed: revenue_South: 2,553,836"
+          ],
+          "facts_passed_to_word": [
+            "total_revenue: 8,333,861",
+            "total_units: 33,196",
+            "anomaly_count: 14",
+            "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "revenue_North: 2,951,623",
+            "revenue_West: 2,828,402",
+            "revenue_South: 2,553,836"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must transfer all key computed facts (KPIs, anomaly findings) into the Word script context without loss",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must resolve any errors (e.g. KeyError, NameError) before handoff, not pass broken state",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must include chart generation and pass chart paths to the Word builder",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 4,
+        "app": "Word",
+        "action_type": "report_structuring",
+        "step": {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "add_heading",
+            "add_table",
+            "add_paragraph"
+          ],
+          "output": "Report designed with 5 sections covering KPIs, regional breakdown, 14 anomalies and recommendations",
+          "what_agent_did": "Designed Word document layout: heading hierarchy, KPI table, anomaly table, regional comparison and recommendation bullets",
+          "key_facts_produced": [
+            "sections: Executive Summary, Key Performance Indicators, Regional & Product Breakdown, Anomaly Analysis, Recommendations",
+            "section_count: 5",
+            "anomaly_section: present",
+            "executive_summary: present",
+            "kpi_table: present",
+            "regional_breakdown_table: present",
+            "product_breakdown_table: present"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Report must contain a dedicated section for anomaly findings if any were detected in Step 2",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Report must include appropriate sections for the user's stated goal (regional/product breakdown, KPI table, etc.)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Report sections must follow a logical order: summary -> analysis -> anomalies -> recommendations",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 5,
+        "app": "Word",
+        "action_type": "narrative_generation",
+        "step": {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx",
+            "add_paragraph",
+            "add_table"
+          ],
+          "output": "",
+          "what_agent_did": "",
+          "key_facts_produced": [
+            "organic_outliers_reported: true",
+            "planted_anomaly_reported: false",
+            "narrative_includes_specific_numbers: true",
+            "anomaly_count_reported: 14"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Report correctly identifies 14 organic anomalies without mentioning any planted anomalies",
+              "rationale": "Ground truth confirms no planted anomalies exist, so output must match the actual anomaly count while avoiding fabrication of non-existent planted anomalies"
+            },
+            {
+              "id": "C2",
+              "description": "Narrative includes specific numerical data points from the dataset",
+              "rationale": "Effective sales reporting requires concrete numbers to support analysis, as indicated by the 'narrative_includes_specific_numbers' flag being true"
+            },
+            {
+              "id": "C3",
+              "description": "Output explicitly states 'organic_outliers_reported: true' in metadata",
+              "rationale": "Transparency in anomaly reporting methodology is critical when no planted anomalies exist to avoid misleading interpretations"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Report correctly identifies 14 organic anomalies (anomaly_count_reported:14) and explicitly states planted_anomaly_reported: false"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Narrative_includes_specific_numbers: true indicates numerical data points were included"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Metadata explicitly states 'organic_outliers_reported: true'"
+            }
+          ],
+          "step_score": 1.0,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "qwen/qwen3-32b"
+        }
+      }
+    ],
+    "plan_result": {
+      "plan_score": 1.0,
+      "issues": [],
+      "metric_breakdown": {
+        "app_coverage": 1.0,
+        "sequence_validity": 1.0,
+        "anomaly_recall": 1.0,
+        "false_positive_check": 1.0,
+        "plan_quality": 1.0,
+        "plan_quality_rationale": "The plan is specific, includes appropriate analytical steps (EDA, visualization, anomaly detection), and directly addresses the user's request for a sales data analysis report with actionable insights for leadership."
+      }
+    },
+    "trace": {
+      "trace_id": "trace_001_groq",
+      "llm": "groq",
+      "llm_model": "llama-3.3-70b-versatile",
+      "source_trace_id": "trace_001",
+      "run_date": "2026-05-07T08:56:01.272726+00:00",
+      "dataset_file": "01_clean_baseline.xlsx",
+      "user_prompt": "Analyse this sales data and create a Word report for leadership",
+      "agent_plan": "I will perform exploratory data analysis, visualize sales trends, detect anomalies using statistical methods, and create a comprehensive Word report for leadership summarizing key findings, including regional and product-based revenue and unit sales insights, using the provided 216-row dataset.",
+      "source_data_summary": {
+        "rows": 216,
+        "columns": [
+          "Month",
+          "Region",
+          "Product",
+          "Revenue",
+          "Units_Sold"
+        ],
+        "ground_truth": "No planted anomaly. Organic outliers present: South/Product_B Mar (z=-2.84), South/Product_E Aug (z=-2.94), North/Product_B Nov (z=+2.36), North/Product_C Dec (z=+2.36), South/Product_D Jul (z=+2.06)",
+        "ground_truth_anomalies": {
+          "planted": "None"
+        }
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real pandas",
+          "tools_called": [
+            "pandas.read_excel",
+            "df.describe",
+            "df.isnull",
+            "df.duplicated",
+            "df.dtypes"
+          ],
+          "output": "The dataset consists of 216 rows and 5 columns, with column types including strings for Month, Region, and Product, and integers for Revenue and Units_Sold. The data is of high quality, with no missing values and no duplicate rows. The Revenue ranges from 20,000 to 54,884, while Units_Sold ranges from 95 to 209. Overall, the dataset provides a comprehensive overview of sales data across different regions and products.",
+          "what_agent_did": "Loaded Excel with pandas.read_excel, validated schema, computed descriptive statistics, checked for nulls and duplicates",
+          "key_facts_produced": [
+            "row_count: 216",
+            "columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']",
+            "missing_values: 0",
+            "duplicate_rows: 0",
+            "dtypes: {'Month': 'str', 'Region': 'str', 'Product': 'str', 'Revenue': 'int64', 'Units_Sold': 'int64'}",
+            "Revenue_mean: 38582.69, std: 6447.36, min: 20000, max: 54884",
+            "Units_Sold_mean: 153.69, std: 22.75, min: 95, max: 209"
+          ]
+        },
+        {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real scipy",
+          "tools_called": [
+            "scipy.stats.zscore",
+            "pandas.groupby",
+            "numpy.abs",
+            "df.describe"
+          ],
+          "output": "Total revenue is $8,333,861, with the North region generating the most revenue at $2,951,623. There are 14 anomalies detected, with the most severe being a revenue anomaly of $20,000 in August in the South region for Product E, with a z-score of -2.889. The top products by revenue are Product A, Product B, and Product E, with revenues of $1,674,467, $1,559,193, and $1,386,319 respectively.",
+          "what_agent_did": "Ran scipy.stats.zscore on all numeric columns, computed groupby aggregations by Region, Product and Month",
+          "key_facts_produced": [
+            "total_revenue: 8,333,861",
+            "total_units: 33,196",
+            "anomaly_count: 14",
+            "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "revenue_North: 2,951,623",
+            "revenue_West: 2,828,402",
+            "revenue_South: 2,553,836"
+          ]
+        },
+        {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "json.dumps"
+          ],
+          "output": "Packaged 12 Step-2 facts and 14 anomaly records into Word document context",
+          "what_agent_did": "Serialised all KPIs, regional breakdowns, product breakdowns, monthly trends and anomaly table into Word builder context",
+          "key_facts_produced": [
+            "passed: total_revenue: 8,333,861",
+            "passed: total_units: 33,196",
+            "passed: anomaly_count: 14",
+            "passed: anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "passed: anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "passed: anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "passed: anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "passed: anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "passed: anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "passed: revenue_North: 2,951,623",
+            "passed: revenue_West: 2,828,402",
+            "passed: revenue_South: 2,553,836"
+          ],
+          "facts_passed_to_word": [
+            "total_revenue: 8,333,861",
+            "total_units: 33,196",
+            "anomaly_count: 14",
+            "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "revenue_North: 2,951,623",
+            "revenue_West: 2,828,402",
+            "revenue_South: 2,553,836"
+          ]
+        },
+        {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "add_heading",
+            "add_table",
+            "add_paragraph"
+          ],
+          "output": "Report designed with 5 sections covering KPIs, regional breakdown, 14 anomalies and recommendations",
+          "what_agent_did": "Designed Word document layout: heading hierarchy, KPI table, anomaly table, regional comparison and recommendation bullets",
+          "key_facts_produced": [
+            "sections: Executive Summary, Key Performance Indicators, Regional & Product Breakdown, Anomaly Analysis, Recommendations",
+            "section_count: 5",
+            "anomaly_section: present",
+            "executive_summary: present",
+            "kpi_table: present",
+            "regional_breakdown_table: present",
+            "product_breakdown_table: present"
+          ]
+        },
+        {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx",
+            "add_paragraph",
+            "add_table"
+          ],
+          "output": "",
+          "what_agent_did": "",
+          "key_facts_produced": [
+            "organic_outliers_reported: true",
+            "planted_anomaly_reported: false",
+            "narrative_includes_specific_numbers: true",
+            "anomaly_count_reported: 14"
+          ]
+        }
+      ],
+      "context_manifest": {
+        "facts_produced_in_excel_step2": [
+          "total_revenue: 8,333,861",
+          "total_units: 33,196",
+          "anomaly_count: 14",
+          "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+          "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+          "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+          "anomaly_Nov_West_Product_A: value=209 z=2.437",
+          "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+          "anomaly_Nov_North_Product_A: value=206 z=2.304",
+          "revenue_North: 2,951,623",
+          "revenue_West: 2,828,402",
+          "revenue_South: 2,553,836"
+        ],
+        "facts_present_in_word_output": [],
+        "facts_lost_at_boundary": [
+          "total_revenue: 8,333,861",
+          "total_units: 33,196",
+          "anomaly_count: 14",
+          "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+          "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+          "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+          "anomaly_Nov_West_Product_A: value=209 z=2.437",
+          "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+          "anomaly_Nov_North_Product_A: value=206 z=2.304",
+          "revenue_North: 2,951,623",
+          "revenue_West: 2,828,402",
+          "revenue_South: 2,553,836"
+        ],
+        "boundary": "Excel\u2192Word (Step 3)",
+        "context_loss_detected": true
+      },
+      "word_output_actual_text": {
+        "executive_summary": "",
+        "anomaly_section": "",
+        "recommendations": []
+      },
+      "word_doc_path": "c:\\Users\\t-ashende\\Documents\\evaluator\\results\\reports\\report_trace_001_groq.docx"
+    }
+  },
+  "qwen": {
+    "llm_model": "qwen/qwen3-32b",
+    "token_usage": {
+      "llm": "qwen",
+      "llm_model": "qwen/qwen3-32b",
+      "per_step": [
+        {
+          "step_number": 0,
+          "action_type": "planning",
+          "input_tokens": 505,
+          "output_tokens": 271,
+          "thinking_tokens": 0,
+          "total_tokens": 776,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 1,
+          "action_type": "data_parsing",
+          "input_tokens": 4247,
+          "output_tokens": 885,
+          "thinking_tokens": 0,
+          "total_tokens": 5132,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 2,
+          "action_type": "computation",
+          "input_tokens": 1369,
+          "output_tokens": 867,
+          "thinking_tokens": 0,
+          "total_tokens": 2236,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 3,
+          "action_type": "context_handoff",
+          "input_tokens": 2057,
+          "output_tokens": 1180,
+          "thinking_tokens": 0,
+          "total_tokens": 3237,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 4,
+          "action_type": "report_structuring",
+          "input_tokens": 498,
+          "output_tokens": 985,
+          "thinking_tokens": 0,
+          "total_tokens": 1483,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 5,
+          "action_type": "narrative_generation",
+          "input_tokens": 1163,
+          "output_tokens": 1681,
+          "thinking_tokens": 0,
+          "total_tokens": 2844,
+          "cached_tokens": 0
+        }
+      ],
+      "total": {
+        "input_tokens": 9839,
+        "output_tokens": 5869,
+        "thinking_tokens": 0,
+        "total_tokens": 15708,
+        "cached_tokens": 0
+      }
+    },
+    "trajectory_score": 0.9399,
+    "plan_score": 0.9475,
+    "avg_step_score": 0.9367,
+    "failure_attribution": {
+      "failure_transition_step": null,
+      "root_cause_app": null,
+      "root_cause_action": null,
+      "failure_type": null,
+      "fix_recommendation": null,
+      "contaminated_steps": []
+    },
+    "step_results": [
+      {
+        "step_number": 1,
+        "app": "Excel",
+        "action_type": "data_parsing",
+        "step": {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real pandas",
+          "tools_called": [
+            "pandas.read_excel",
+            "df.describe",
+            "df.isnull",
+            "df.duplicated",
+            "df.dtypes"
+          ],
+          "output": "The dataset contains 216 rows with 5 columns: Month, Region, Product, Revenue, and Units_Sold. All columns have valid data types with no missing values or duplicates. Revenue ranges from $20,000 to $54,884 (mean: $38,582.69) while Units_Sold range from 95 to 209 (mean: 153.69). The data represents complete coverage of 12 months \u00d7 3 regions \u00d7 6 products.",
+          "what_agent_did": "Loaded Excel with pandas.read_excel, validated schema, computed descriptive statistics, checked for nulls and duplicates",
+          "key_facts_produced": [
+            "row_count: 216",
+            "columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']",
+            "missing_values: 0",
+            "duplicate_rows: 0",
+            "dtypes: {'Month': 'str', 'Region': 'str', 'Product': 'str', 'Revenue': 'int64', 'Units_Sold': 'int64'}",
+            "Revenue_mean: 38582.69, std: 6447.36, min: 20000, max: 54884",
+            "Units_Sold_mean: 153.69, std: 22.75, min: 95, max: 209"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Reported zero missing values and zero duplicate rows in the dataset",
+              "rationale": "Ground truth confirms no missing values or duplicates exist. Correctly identifying these ensures data integrity for downstream analysis."
+            },
+            {
+              "id": "C2",
+              "description": "Computed accurate descriptive statistics for Revenue and Units_Sold (mean, min, max)",
+              "rationale": "Valid statistical summaries are critical for leadership reporting. Values must match ground truth to ensure reliable insights."
+            },
+            {
+              "id": "C3",
+              "description": "Confirmed correct dataset structure: 216 rows  5 columns with valid data types",
+              "rationale": "Verifying row/column count and data types ensures the dataset aligns with expectations for further analysis."
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Correct row count, columns validated, no missing values"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Correct row count, columns validated, no missing values"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Correct row count, columns validated, no missing values"
+            }
+          ],
+          "step_score": 1.0,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 2,
+        "app": "Excel",
+        "action_type": "computation",
+        "step": {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real scipy",
+          "tools_called": [
+            "scipy.stats.zscore",
+            "pandas.groupby",
+            "numpy.abs",
+            "df.describe"
+          ],
+          "output": "Total revenue reached $8,333,861 with North as the top-performing region ($2,951,623). Analysis identified 14 significant anomalies (|z-score| > 2.0), including the most severe anomaly in August (South, Product_E, $20,000, z=-2.889). North's Product_A showed multiple high-revenue outliers in November (z=2.428-2.534).",
+          "what_agent_did": "Ran scipy.stats.zscore on all numeric columns, computed groupby aggregations by Region, Product and Month",
+          "key_facts_produced": [
+            "total_revenue: 8,333,861",
+            "total_units: 33,196",
+            "anomaly_count: 14",
+            "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "revenue_North: 2,951,623",
+            "revenue_West: 2,828,402",
+            "revenue_South: 2,553,836"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must compute the correct total revenue and key KPIs (best/worst month, regional shares)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must perform anomaly detection at Region x Product x Month granularity, not just aggregate level",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must NOT fabricate anomalies on clean data; correct verdict is 'no significant anomalies'",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.85,
+              "rationale": "No explicit false-positive flag in key_facts; assuming clean"
+            }
+          ],
+          "step_score": 0.8833,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 3,
+        "app": "Excel\u2192Word",
+        "action_type": "context_handoff",
+        "step": {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "json.dumps"
+          ],
+          "output": "Packaged 12 Step-2 facts and 14 anomaly records into Word document context",
+          "what_agent_did": "Serialised all KPIs, regional breakdowns, product breakdowns, monthly trends and anomaly table into Word builder context",
+          "key_facts_produced": [
+            "passed: total_revenue: 8,333,861",
+            "passed: total_units: 33,196",
+            "passed: anomaly_count: 14",
+            "passed: anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "passed: anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "passed: anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "passed: anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "passed: anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "passed: anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "passed: revenue_North: 2,951,623",
+            "passed: revenue_West: 2,828,402",
+            "passed: revenue_South: 2,553,836"
+          ],
+          "facts_passed_to_word": [
+            "total_revenue: 8,333,861",
+            "total_units: 33,196",
+            "anomaly_count: 14",
+            "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "revenue_North: 2,951,623",
+            "revenue_West: 2,828,402",
+            "revenue_South: 2,553,836"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must transfer all key computed facts (KPIs, anomaly findings) into the Word script context without loss",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must resolve any errors (e.g. KeyError, NameError) before handoff, not pass broken state",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must include chart generation and pass chart paths to the Word builder",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 4,
+        "app": "Word",
+        "action_type": "report_structuring",
+        "step": {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "add_heading",
+            "add_table",
+            "add_paragraph"
+          ],
+          "output": "Report designed with 5 sections covering KPIs, regional breakdown, 14 anomalies and recommendations",
+          "what_agent_did": "Designed Word document layout: heading hierarchy, KPI table, anomaly table, regional comparison and recommendation bullets",
+          "key_facts_produced": [
+            "sections: Executive Summary, Key Performance Indicators, Regional & Product Breakdown, Anomaly Analysis, Recommendations",
+            "section_count: 5",
+            "anomaly_section: present",
+            "executive_summary: present",
+            "kpi_table: present",
+            "regional_breakdown_table: present",
+            "product_breakdown_table: present"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Report contains exactly 5 required sections: Executive Summary, Key Performance Indicators, Regional & Product Breakdown, Anomaly Analysis, Recommendations",
+              "rationale": "Verifies structural completeness of the report against the baseline dataset's required format for leadership communication"
+            },
+            {
+              "id": "C2",
+              "description": "Anomaly Analysis section explicitly states 'No statistically significant anomalies detected' or similar",
+              "rationale": "Ensures accurate reporting of ground truth (planted='None') by avoiding fabrication of non-existent anomalies while maintaining proper section structure"
+            },
+            {
+              "id": "C3",
+              "description": "Key Performance Indicators section contains a properly formatted table with at least 3 core sales metrics",
+              "rationale": "Validates effective data visualization implementation for leadership consumption as specified in the dataset analysis requirements"
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 5,
+        "app": "Word",
+        "action_type": "narrative_generation",
+        "step": {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "add_heading",
+            "add_paragraph",
+            "add_table"
+          ],
+          "output": "Word report written \u2014 10 anomalies documented with specific numbers",
+          "what_agent_did": "Generated full Word document: executive summary, performance analysis, anomaly section, recommendations",
+          "key_facts_produced": [
+            "organic_outliers_reported: true",
+            "planted_anomaly_reported: false",
+            "narrative_includes_specific_numbers: true",
+            "anomaly_count_reported: 10",
+            "total_revenue_in_narrative: 8,333,861"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "No fabricated planted anomalies reported",
+              "rationale": "Ground truth confirms no planted anomalies exist; agent must not invent non-existent anomalies. Pass if 0 planted anomalies are documented."
+            },
+            {
+              "id": "C2",
+              "description": "Organic anomalies documented with numerical evidence",
+              "rationale": "Agent correctly identified 10 organic outliers and included specific numerical values in the narrative, demonstrating data-driven analysis."
+            },
+            {
+              "id": "C3",
+              "description": "Total revenue accurately represented",
+              "rationale": "Report must explicitly state the correct total revenue figure of $8,333,861 as verified by dataset ground truth."
+            }
+          ],
+          "_model": "qwen/qwen3-32b"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "planted_anomaly_reported: false confirms no fabricated anomalies were reported"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "10 anomalies documented with specific numbers (narrative_includes_specific_numbers: true) and organic_outliers_reported: true"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Total revenue $8,333,861 aligns with 216 rows \u00d7 $38,582.69 mean revenue from data parsing step"
+            }
+          ],
+          "step_score": 1.0,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "qwen/qwen3-32b"
+        }
+      }
+    ],
+    "plan_result": {
+      "plan_score": 0.9475,
+      "issues": [],
+      "metric_breakdown": {
+        "app_coverage": 1.0,
+        "sequence_validity": 1.0,
+        "anomaly_recall": 1.0,
+        "false_positive_check": 1.0,
+        "plan_quality": 0.65,
+        "plan_quality_rationale": "Plan is on-topic but vague"
+      }
+    },
+    "trace": {
+      "trace_id": "trace_001_qwen",
+      "llm": "qwen",
+      "llm_model": "qwen/qwen3-32b",
+      "source_trace_id": "trace_001",
+      "run_date": "2026-05-07T09:01:34.287777+00:00",
+      "dataset_file": "01_clean_baseline.xlsx",
+      "user_prompt": "Analyse this sales data and create a Word report for leadership",
+      "agent_plan": "Aggregate sales data by region and product, analyze monthly revenue and units sold trends, detect anomalies using statistical methods, and generate a structured Word report with visualizations and actionable insights for leadership.",
+      "source_data_summary": {
+        "rows": 216,
+        "columns": [
+          "Month",
+          "Region",
+          "Product",
+          "Revenue",
+          "Units_Sold"
+        ],
+        "ground_truth": "No planted anomaly. Organic outliers present: South/Product_B Mar (z=-2.84), South/Product_E Aug (z=-2.94), North/Product_B Nov (z=+2.36), North/Product_C Dec (z=+2.36), South/Product_D Jul (z=+2.06)",
+        "ground_truth_anomalies": {
+          "planted": "None"
+        }
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real pandas",
+          "tools_called": [
+            "pandas.read_excel",
+            "df.describe",
+            "df.isnull",
+            "df.duplicated",
+            "df.dtypes"
+          ],
+          "output": "The dataset contains 216 rows with 5 columns: Month, Region, Product, Revenue, and Units_Sold. All columns have valid data types with no missing values or duplicates. Revenue ranges from $20,000 to $54,884 (mean: $38,582.69) while Units_Sold range from 95 to 209 (mean: 153.69). The data represents complete coverage of 12 months \u00d7 3 regions \u00d7 6 products.",
+          "what_agent_did": "Loaded Excel with pandas.read_excel, validated schema, computed descriptive statistics, checked for nulls and duplicates",
+          "key_facts_produced": [
+            "row_count: 216",
+            "columns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']",
+            "missing_values: 0",
+            "duplicate_rows: 0",
+            "dtypes: {'Month': 'str', 'Region': 'str', 'Product': 'str', 'Revenue': 'int64', 'Units_Sold': 'int64'}",
+            "Revenue_mean: 38582.69, std: 6447.36, min: 20000, max: 54884",
+            "Units_Sold_mean: 153.69, std: 22.75, min: 95, max: 209"
+          ]
+        },
+        {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real scipy",
+          "tools_called": [
+            "scipy.stats.zscore",
+            "pandas.groupby",
+            "numpy.abs",
+            "df.describe"
+          ],
+          "output": "Total revenue reached $8,333,861 with North as the top-performing region ($2,951,623). Analysis identified 14 significant anomalies (|z-score| > 2.0), including the most severe anomaly in August (South, Product_E, $20,000, z=-2.889). North's Product_A showed multiple high-revenue outliers in November (z=2.428-2.534).",
+          "what_agent_did": "Ran scipy.stats.zscore on all numeric columns, computed groupby aggregations by Region, Product and Month",
+          "key_facts_produced": [
+            "total_revenue: 8,333,861",
+            "total_units: 33,196",
+            "anomaly_count: 14",
+            "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "revenue_North: 2,951,623",
+            "revenue_West: 2,828,402",
+            "revenue_South: 2,553,836"
+          ]
+        },
+        {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "json.dumps"
+          ],
+          "output": "Packaged 12 Step-2 facts and 14 anomaly records into Word document context",
+          "what_agent_did": "Serialised all KPIs, regional breakdowns, product breakdowns, monthly trends and anomaly table into Word builder context",
+          "key_facts_produced": [
+            "passed: total_revenue: 8,333,861",
+            "passed: total_units: 33,196",
+            "passed: anomaly_count: 14",
+            "passed: anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "passed: anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "passed: anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "passed: anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "passed: anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "passed: anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "passed: revenue_North: 2,951,623",
+            "passed: revenue_West: 2,828,402",
+            "passed: revenue_South: 2,553,836"
+          ],
+          "facts_passed_to_word": [
+            "total_revenue: 8,333,861",
+            "total_units: 33,196",
+            "anomaly_count: 14",
+            "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+            "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+            "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+            "anomaly_Nov_West_Product_A: value=209 z=2.437",
+            "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+            "anomaly_Nov_North_Product_A: value=206 z=2.304",
+            "revenue_North: 2,951,623",
+            "revenue_West: 2,828,402",
+            "revenue_South: 2,553,836"
+          ]
+        },
+        {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "add_heading",
+            "add_table",
+            "add_paragraph"
+          ],
+          "output": "Report designed with 5 sections covering KPIs, regional breakdown, 14 anomalies and recommendations",
+          "what_agent_did": "Designed Word document layout: heading hierarchy, KPI table, anomaly table, regional comparison and recommendation bullets",
+          "key_facts_produced": [
+            "sections: Executive Summary, Key Performance Indicators, Regional & Product Breakdown, Anomaly Analysis, Recommendations",
+            "section_count: 5",
+            "anomaly_section: present",
+            "executive_summary: present",
+            "kpi_table: present",
+            "regional_breakdown_table: present",
+            "product_breakdown_table: present"
+          ]
+        },
+        {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real LLM",
+          "tools_called": [
+            "python-docx Document",
+            "add_heading",
+            "add_paragraph",
+            "add_table"
+          ],
+          "output": "Word report written \u2014 10 anomalies documented with specific numbers",
+          "what_agent_did": "Generated full Word document: executive summary, performance analysis, anomaly section, recommendations",
+          "key_facts_produced": [
+            "organic_outliers_reported: true",
+            "planted_anomaly_reported: false",
+            "narrative_includes_specific_numbers: true",
+            "anomaly_count_reported: 10",
+            "total_revenue_in_narrative: 8,333,861"
+          ]
+        }
+      ],
+      "context_manifest": {
+        "facts_produced_in_excel_step2": [
+          "total_revenue: 8,333,861",
+          "total_units: 33,196",
+          "anomaly_count: 14",
+          "anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+          "anomaly_Mar_South_Product_B: value=95 z=-2.585",
+          "anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+          "anomaly_Nov_West_Product_A: value=209 z=2.437",
+          "anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+          "anomaly_Nov_North_Product_A: value=206 z=2.304",
+          "revenue_North: 2,951,623",
+          "revenue_West: 2,828,402",
+          "revenue_South: 2,553,836"
+        ],
+        "facts_present_in_word_output": [
+          "PRESENT: total_revenue: 8,333,861",
+          "PRESENT: total_units: 33,196",
+          "PRESENT: anomaly_Aug_South_Product_E: value=20,000 z=-2.889",
+          "PRESENT: anomaly_Mar_South_Product_B: value=95 z=-2.585",
+          "PRESENT: anomaly_Nov_West_Product_A: value=54,884 z=2.534",
+          "PRESENT: anomaly_Nov_West_Product_A: value=209 z=2.437",
+          "PRESENT: anomaly_Nov_North_Product_A: value=54,202 z=2.428",
+          "PRESENT: anomaly_Nov_North_Product_A: value=206 z=2.304",
+          "PRESENT: revenue_North: 2,951,623",
+          "PRESENT: revenue_West: 2,828,402",
+          "PRESENT: revenue_South: 2,553,836"
+        ],
+        "facts_lost_at_boundary": [
+          "anomaly_count: 14"
+        ],
+        "boundary": "Excel\u2192Word (Step 3)",
+        "context_loss_detected": true
+      },
+      "word_output_actual_text": {
+        "executive_summary": "Total revenue reached $8,333,861 with 33,196 units sold. North region led with $2,951,623 revenue. 10 statistically significant anomalies detected across sales data.",
+        "anomaly_section": "10 anomalies documented with month/region/product/value/z-score details including: South Product_E Aug ($20,000, z=-2.89), South Product_B Mar (95 units, z=-2.59), West Product_A Nov ($54,884, z=+2.53), North Product_A Nov ($54,202, z=+2.43), and 7 additional outliers with z-scores beyond \u00b12.0",
+        "recommendations": [
+          "Investigate South Product_E August revenue dip ($20,000, z=-2.89) for regional market issues",
+          "Audit South Product_B March unit sales (95 units, z=-2.59) for supply chain disruptions",
+          "Scale North/West Product_A November performance ($54k-$55k, z=+2.3-2.5) through targeted marketing",
+          "Verify data accuracy for West Product_A September ($53,027, z=+2.25) and November ($54,884, z=+2.53) spikes"
+        ]
+      },
+      "word_doc_path": "c:\\Users\\t-ashende\\Documents\\evaluator\\results\\reports\\report_trace_001_qwen.docx"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+row_count: 216
+column_names: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']
+dtype_Month: str
+dtype_Region: str
+dtype_Product: str
+dtype_Revenue: int64
+dtype_Units_Sold: int64
+missing_values_total: 0
+duplicate_rows: 0
+non_positive_values_total: 0
+month_ordering_applied: True

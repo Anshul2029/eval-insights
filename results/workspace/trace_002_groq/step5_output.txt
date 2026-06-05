@@ -1,0 +1,3 @@
+<<<JSON_START>>>
+{"executive_summary": "Total Revenue is Not Available, Total Units is Not Available, and the top performing region is South with 22216 in sales.", "anomaly_section": "There is an anomaly in the South region with Product_B product in Mar month, with a value of 22216 and a Z-Score of -2.854842608479817.", "recommendations": ["Increase marketing efforts in the South region", "Optimize product Product_B pricing", "Provide additional training to sales teams in the South region"]}
+<<<JSON_END>>>

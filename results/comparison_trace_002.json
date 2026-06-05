@@ -1,0 +1,1201 @@
+{
+  "comparison_id": "trace_002",
+  "generated_at": "2026-05-06T05:17:35.175459+00:00",
+  "llms_compared": [
+    "groq",
+    "qwen"
+  ],
+  "groq": {
+    "llm_model": "llama-3.3-70b-versatile",
+    "token_usage": {
+      "llm": "groq",
+      "llm_model": "llama-3.3-70b-versatile",
+      "per_step": [
+        {
+          "step_number": 1,
+          "action_type": "data_parsing",
+          "input_tokens": 426,
+          "output_tokens": 443,
+          "thinking_tokens": 0,
+          "total_tokens": 869,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 2,
+          "action_type": "computation",
+          "input_tokens": 650,
+          "output_tokens": 1001,
+          "thinking_tokens": 0,
+          "total_tokens": 1651,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 3,
+          "action_type": "context_handoff",
+          "input_tokens": 422,
+          "output_tokens": 316,
+          "thinking_tokens": 0,
+          "total_tokens": 738,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 4,
+          "action_type": "report_structuring",
+          "input_tokens": 365,
+          "output_tokens": 239,
+          "thinking_tokens": 0,
+          "total_tokens": 604,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 5,
+          "action_type": "narrative_generation",
+          "input_tokens": 1437,
+          "output_tokens": 1433,
+          "thinking_tokens": 0,
+          "total_tokens": 2870,
+          "cached_tokens": 0
+        }
+      ],
+      "total": {
+        "input_tokens": 3300,
+        "output_tokens": 3432,
+        "thinking_tokens": 0,
+        "total_tokens": 6732,
+        "cached_tokens": 0
+      }
+    },
+    "trajectory_score": 0.9189,
+    "plan_score": 0.9475,
+    "avg_step_score": 0.9067,
+    "failure_attribution": {
+      "failure_transition_step": null,
+      "root_cause_app": null,
+      "root_cause_action": null,
+      "failure_type": null,
+      "fix_recommendation": null,
+      "contaminated_steps": []
+    },
+    "trace": {
+      "trace_id": "trace_002_groq",
+      "llm": "groq",
+      "llm_model": "llama-3.3-70b-versatile",
+      "source_trace_id": "trace_002",
+      "run_date": "2026-05-06T05:14:25.558999+00:00",
+      "dataset_file": "02_single_anomaly_subtle.xlsx",
+      "user_prompt": "Analyse this sales data and create a Word report for leadership",
+      "agent_plan": "Real code execution via groq LLM on 02_single_anomaly_subtle.xlsx",
+      "source_data_summary": {
+        "rows": 216,
+        "columns": [
+          "Month",
+          "Region",
+          "Product",
+          "Revenue",
+          "Units_Sold"
+        ],
+        "ground_truth": "Planted anomaly: South/Product_B March Revenue dropped from 37,655 (Feb) to 22,216 (Mar) \u2014 41% decline. Organic: South/Product_E Aug Revenue 20,000.",
+        "ground_truth_anomalies": {
+          "planted": "Planted anomaly: South/Product_B March Revenue dropped from 37,655 (Feb) to 22,216 (Mar) \u2014 41% decline. Organic: South/Product_E Aug Revenue 20,000."
+        }
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "row_count:  216\ncolumn_names:  ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']\ndtypes: \nMonth: str\nRegion: str\nProduct: str\nRevenue: int64\nUnits_Sold: int64\nmissing_values: \nMonth: 0\nRegion: 0\nProduct: 0\nRevenue: 0\nUnits_Sold: 0\nduplicate_count:  0\nnon_positive_count:  0\nmonth_order_applied: True",
+          "what_agent_did": "LLM generated and executed Python code for data_parsing",
+          "key_facts_produced": [
+            "row_count: 216",
+            "column_count: 5",
+            "column_names: Month, Region, Product, Revenue, Units_Sold",
+            "missing_values: 0",
+            "duplicate_count: 0",
+            "non_positive_count: 0",
+            "month_order_applied: True",
+            "data_types: Month=str, Region=str, Product=str, Revenue=int64, Units_Sold=int64"
+          ]
+        },
+        {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "Month: Mar\nRegion: South\nProduct: Product_B\nValue: 22216\nZ-Score: -2.854842608479817\n\nKey Findings:\nTotal Revenue: 8330077\nTotal Units: 33157\nRegional Breakdown:\nNorth: 2951623\nSouth: 2550052\nWest: 2828402\nProduct Breakdown:\nProduct_A: 1674467\nProduct_B: 1555409\nProduct_C: 1300974\nProduct_D: 1143307\nProduct_E: 1386319\nProduct_F: 1269601",
+          "what_agent_did": "LLM generated and executed Python code for computation",
+          "key_facts_produced": [
+            "Month: Mar",
+            "Region: South",
+            "Product: Product_B",
+            "Value: 22216",
+            "Z-Score: -2.854842608479817",
+            "Total Revenue: 8330077",
+            "Total Units: 33157",
+            "North Revenue: 2951623",
+            "South Revenue: 2550052",
+            "West Revenue: 2828402",
+            "Product_A Units: 1674467",
+            "Product_B Units: 1555409",
+            "Product_C Units: 1300974",
+            "Product_D Units: 1143307",
+            "Product_E Units: 1386319",
+            "Product_F Units: 1269601",
+            "Is Anomaly: true",
+            "Anomaly Severity: High"
+          ]
+        },
+        {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "handoff_complete: true\nKeys saved: ['Month', 'Region', 'Product', 'Value', 'Z-Score', 'Key Findings']",
+          "what_agent_did": "LLM generated and executed Python code for context_handoff",
+          "key_facts_produced": [
+            "handoff_complete: true",
+            "number_of_keys_saved: 6",
+            "keys_saved: Month, Region, Product, Value, Z-Score, Key Findings"
+          ]
+        },
+        {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "Executive Summary\nBusiness Performance\nAnomaly Analysis\nRecommendations",
+          "what_agent_did": "LLM generated and executed Python code for report_structuring",
+          "key_facts_produced": [
+            "section_count: 4",
+            "sections: Executive Summary, Business Performance, Anomaly Analysis, Recommendations",
+            "anomaly_detected: false",
+            "score: unknown",
+            "report_type: structuring_step_output"
+          ]
+        },
+        {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "<<<JSON_START>>>\n{\"executive_summary\": \"Total Revenue is Not Available, Total Units is Not Available, and the top performing region is South with 22216 in sales.\", \"anomaly_section\": \"There is an anomaly in the South region with Product_B product in Mar month, with a value of 22216 and a Z-Score of -2.854842608479817.\", \"recommendations\": [\"Increase marketing efforts in the South region\", \"Optimize product Product_B pricing\", \"Provide additional training to sales teams in the South region\"]}\n<<<JSON_END>>>",
+          "what_agent_did": "LLM generated and executed Python code for narrative_generation",
+          "key_facts_produced": [
+            "Total Revenue: Not Available",
+            "Total Units: Not Available",
+            "Top Performing Region: South",
+            "Top Performing Region Sales: 22216",
+            "Anomaly Region: South",
+            "Anomaly Product: Product_B",
+            "Anomaly Month: Mar",
+            "Anomaly Value: 22216",
+            "Z-Score: -2.854842608479817",
+            "Anomaly Detected: True",
+            "Recommendations Count: 3"
+          ]
+        }
+      ],
+      "context_manifest": {
+        "facts_produced_in_excel_step2": [
+          "Total Revenue: 8330077",
+          "Total Units: 33157",
+          "North Revenue: 2951623",
+          "South Revenue: 2550052",
+          "West Revenue: 2828402",
+          "Is Anomaly: true",
+          "Anomaly Severity: High"
+        ],
+        "facts_present_in_word_output": [
+          "PRESENT: Total Revenue: 8330077",
+          "PRESENT: Total Units: 33157",
+          "PRESENT: North Revenue: 2951623",
+          "PRESENT: South Revenue: 2550052",
+          "PRESENT: West Revenue: 2828402",
+          "PRESENT: Is Anomaly: true",
+          "PRESENT: Anomaly Severity: High"
+        ],
+        "facts_lost_at_boundary": [],
+        "boundary": "Excel\u2192Word (Step 3)",
+        "context_loss_detected": false
+      },
+      "word_output_actual_text": {
+        "executive_summary": "Total Revenue is Not Available, Total Units is Not Available, and the top performing region is South with 22216 in sales.",
+        "anomaly_section": "There is an anomaly in the South region with Product_B product in Mar month, with a value of 22216 and a Z-Score of -2.854842608479817.",
+        "recommendations": [
+          "Increase marketing efforts in the South region",
+          "Optimize product Product_B pricing",
+          "Provide additional training to sales teams in the South region"
+        ]
+      },
+      "word_doc_path": "c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_groq\\report.docx",
+      "workspace": "c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_groq"
+    },
+    "step_results": [
+      {
+        "step_number": 1,
+        "app": "Excel",
+        "action_type": "data_parsing",
+        "step": {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "row_count:  216\ncolumn_names:  ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']\ndtypes: \nMonth: str\nRegion: str\nProduct: str\nRevenue: int64\nUnits_Sold: int64\nmissing_values: \nMonth: 0\nRegion: 0\nProduct: 0\nRevenue: 0\nUnits_Sold: 0\nduplicate_count:  0\nnon_positive_count:  0\nmonth_order_applied: True",
+          "what_agent_did": "LLM generated and executed Python code for data_parsing",
+          "key_facts_produced": [
+            "row_count: 216",
+            "column_count: 5",
+            "column_names: Month, Region, Product, Revenue, Units_Sold",
+            "missing_values: 0",
+            "duplicate_count: 0",
+            "non_positive_count: 0",
+            "month_order_applied: True",
+            "data_types: Month=str, Region=str, Product=str, Revenue=int64, Units_Sold=int64"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must load the correct number of rows and validate all expected columns are present",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must detect and report any missing values or data quality issues (nulls, non-positive values, duplicates)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must apply correct month ordering or time-series preparation for downstream analysis",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Correct row count, columns validated, no missing values"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Correct row count, columns validated, no missing values"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 1.0,
+              "rationale": "Correct row count, columns validated, no missing values"
+            }
+          ],
+          "step_score": 1.0,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 2,
+        "app": "Excel",
+        "action_type": "computation",
+        "step": {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "Month: Mar\nRegion: South\nProduct: Product_B\nValue: 22216\nZ-Score: -2.854842608479817\n\nKey Findings:\nTotal Revenue: 8330077\nTotal Units: 33157\nRegional Breakdown:\nNorth: 2951623\nSouth: 2550052\nWest: 2828402\nProduct Breakdown:\nProduct_A: 1674467\nProduct_B: 1555409\nProduct_C: 1300974\nProduct_D: 1143307\nProduct_E: 1386319\nProduct_F: 1269601",
+          "what_agent_did": "LLM generated and executed Python code for computation",
+          "key_facts_produced": [
+            "Month: Mar",
+            "Region: South",
+            "Product: Product_B",
+            "Value: 22216",
+            "Z-Score: -2.854842608479817",
+            "Total Revenue: 8330077",
+            "Total Units: 33157",
+            "North Revenue: 2951623",
+            "South Revenue: 2550052",
+            "West Revenue: 2828402",
+            "Product_A Units: 1674467",
+            "Product_B Units: 1555409",
+            "Product_C Units: 1300974",
+            "Product_D Units: 1143307",
+            "Product_E Units: 1386319",
+            "Product_F Units: 1269601",
+            "Is Anomaly: true",
+            "Anomaly Severity: High"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must compute the correct total revenue and key KPIs (best/worst month, regional shares)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must perform anomaly detection at Region x Product x Month granularity, not just aggregate level",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must detect the planted anomaly specified in the ground truth (if one exists), or correctly report no anomaly on clean data",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.7,
+              "rationale": "anomaly detection status unclear from key_facts"
+            }
+          ],
+          "step_score": 0.8333,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 3,
+        "app": "Excel\u2192Word",
+        "action_type": "context_handoff",
+        "step": {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "handoff_complete: true\nKeys saved: ['Month', 'Region', 'Product', 'Value', 'Z-Score', 'Key Findings']",
+          "what_agent_did": "LLM generated and executed Python code for context_handoff",
+          "key_facts_produced": [
+            "handoff_complete: true",
+            "number_of_keys_saved: 6",
+            "keys_saved: Month, Region, Product, Value, Z-Score, Key Findings"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must transfer all key computed facts (KPIs, anomaly findings) into the Word script context without loss",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must resolve any errors (e.g. KeyError, NameError) before handoff, not pass broken state",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must include chart generation and pass chart paths to the Word builder",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 4,
+        "app": "Word",
+        "action_type": "report_structuring",
+        "step": {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "Executive Summary\nBusiness Performance\nAnomaly Analysis\nRecommendations",
+          "what_agent_did": "LLM generated and executed Python code for report_structuring",
+          "key_facts_produced": [
+            "section_count: 4",
+            "sections: Executive Summary, Business Performance, Anomaly Analysis, Recommendations",
+            "anomaly_detected: false",
+            "score: unknown",
+            "report_type: structuring_step_output"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Report must contain a dedicated section for anomaly findings if any were detected in Step 2",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Report must include appropriate sections for the user's stated goal (regional/product breakdown, KPI table, etc.)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Report sections must follow a logical order: summary -> analysis -> anomalies -> recommendations",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 5,
+        "app": "Word",
+        "action_type": "narrative_generation",
+        "step": {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "<<<JSON_START>>>\n{\"executive_summary\": \"Total Revenue is Not Available, Total Units is Not Available, and the top performing region is South with 22216 in sales.\", \"anomaly_section\": \"There is an anomaly in the South region with Product_B product in Mar month, with a value of 22216 and a Z-Score of -2.854842608479817.\", \"recommendations\": [\"Increase marketing efforts in the South region\", \"Optimize product Product_B pricing\", \"Provide additional training to sales teams in the South region\"]}\n<<<JSON_END>>>",
+          "what_agent_did": "LLM generated and executed Python code for narrative_generation",
+          "key_facts_produced": [
+            "Total Revenue: Not Available",
+            "Total Units: Not Available",
+            "Top Performing Region: South",
+            "Top Performing Region Sales: 22216",
+            "Anomaly Region: South",
+            "Anomaly Product: Product_B",
+            "Anomaly Month: Mar",
+            "Anomaly Value: 22216",
+            "Z-Score: -2.854842608479817",
+            "Anomaly Detected: True",
+            "Recommendations Count: 3"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Narrative must explicitly name the planted anomaly (if one exists) with specific numbers, not just generic observations",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Recommendations must include actionable follow-up for any anomalies detected, not just generic advice",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Executive summary must accurately reflect the dataset state -- must NOT claim 'no anomalies' when a planted anomaly exists",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      }
+    ],
+    "plan_result": {
+      "plan_score": 0.9475,
+      "issues": [],
+      "metric_breakdown": {
+        "app_coverage": 1.0,
+        "sequence_validity": 1.0,
+        "anomaly_recall": 1.0,
+        "false_positive_check": 1.0,
+        "plan_quality": 0.65,
+        "plan_quality_rationale": "Plan is on-topic but vague"
+      }
+    }
+  },
+  "qwen": {
+    "llm_model": "qwen",
+    "token_usage": {
+      "llm": "qwen",
+      "llm_model": "qwen",
+      "per_step": [
+        {
+          "step_number": 1,
+          "action_type": "data_parsing",
+          "input_tokens": 577,
+          "output_tokens": 3516,
+          "thinking_tokens": 0,
+          "total_tokens": 4093,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 2,
+          "action_type": "computation",
+          "input_tokens": 2767,
+          "output_tokens": 4512,
+          "thinking_tokens": 0,
+          "total_tokens": 7279,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 3,
+          "action_type": "context_handoff",
+          "input_tokens": 333,
+          "output_tokens": 2607,
+          "thinking_tokens": 0,
+          "total_tokens": 2940,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 4,
+          "action_type": "report_structuring",
+          "input_tokens": 323,
+          "output_tokens": 2335,
+          "thinking_tokens": 0,
+          "total_tokens": 2658,
+          "cached_tokens": 0
+        },
+        {
+          "step_number": 5,
+          "action_type": "narrative_generation",
+          "input_tokens": 1605,
+          "output_tokens": 4540,
+          "thinking_tokens": 0,
+          "total_tokens": 6145,
+          "cached_tokens": 0
+        }
+      ],
+      "total": {
+        "input_tokens": 5605,
+        "output_tokens": 17510,
+        "thinking_tokens": 0,
+        "total_tokens": 23115,
+        "cached_tokens": 0
+      }
+    },
+    "trajectory_score": 0.8149,
+    "plan_score": 0.6475,
+    "avg_step_score": 0.8867,
+    "failure_attribution": {
+      "failure_transition_step": null,
+      "root_cause_app": null,
+      "root_cause_action": null,
+      "failure_type": null,
+      "fix_recommendation": null,
+      "contaminated_steps": []
+    },
+    "trace": {
+      "trace_id": "trace_002_qwen",
+      "llm": "qwen",
+      "llm_model": "qwen",
+      "source_trace_id": "trace_002",
+      "run_date": "2026-05-06T05:17:35.172663+00:00",
+      "dataset_file": "02_single_anomaly_subtle.xlsx",
+      "user_prompt": "Analyse this sales data and create a Word report for leadership",
+      "agent_plan": "Real code execution via qwen LLM on 02_single_anomaly_subtle.xlsx",
+      "source_data_summary": {
+        "rows": 216,
+        "columns": [
+          "Month",
+          "Region",
+          "Product",
+          "Revenue",
+          "Units_Sold"
+        ],
+        "ground_truth": "Planted anomaly: South/Product_B March Revenue dropped from 37,655 (Feb) to 22,216 (Mar) \u2014 41% decline. Organic: South/Product_E Aug Revenue 20,000.",
+        "ground_truth_anomalies": {
+          "planted": "Planted anomaly: South/Product_B March Revenue dropped from 37,655 (Feb) to 22,216 (Mar) \u2014 41% decline. Organic: South/Product_E Aug Revenue 20,000."
+        }
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "row_count: 216\ncolumns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']\ndtypes: {'Month': 'str', 'Region': 'str', 'Product': 'str', 'Revenue': 'int64', 'Units_Sold': 'int64'}\nmissing_values: 0\nduplicates: 0",
+          "what_agent_did": "LLM generated and executed Python code for data_parsing",
+          "key_facts_produced": [
+            "Number of rows: 216",
+            "Number of columns: 5 (Month, Region, Product, Revenue, Units_Sold)",
+            "Numeric columns: Revenue (int64), Units_Sold (int64)",
+            "Missing values: 0 (None present)",
+            "Duplicates: 0 (None present)"
+          ]
+        },
+        {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "[EXECUTION FAILED] File \"c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_qwen\\_step_code.py\", line 2\n    Okay, let's tackle this problem step by step. The user wants me to write Python code for Step 2, which is the computation part of analyzing sales data. The task includes loading the Excel file, c",
+          "what_agent_did": "LLM generated and executed Python code for computation",
+          "key_facts_produced": [
+            "execution_status: failed",
+            "file_path: c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_qwen\\_step_code.py",
+            "error_line: 2",
+            "error_type: syntax_error",
+            "error_message: unterminated string or comment",
+            "contains_comment_block: true"
+          ]
+        },
+        {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "handoff_complete: true\nSaved keys: ['error_type', 'error_message', 'file_path', 'line_number', 'description']",
+          "what_agent_did": "LLM generated and executed Python code for context_handoff",
+          "key_facts_produced": [
+            "handoff_complete: true",
+            "saved_keys_count: 5",
+            "saved_key_1: error_type",
+            "saved_key_2: error_message",
+            "saved_key_3: file_path",
+            "saved_key_4: line_number",
+            "saved_key_5: description"
+          ]
+        },
+        {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "Executive Summary\nBusiness Performance\nAnomaly Analysis\nRecommendations",
+          "what_agent_did": "LLM generated and executed Python code for report_structuring",
+          "key_facts_produced": [
+            "Executive Summary: Present",
+            "Business Performance: Present",
+            "Anomaly Analysis: Present",
+            "Recommendations: Present"
+          ]
+        },
+        {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "[EXECUTION FAILED] File \"c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_qwen\\_step_code.py\", line 16\n    prev_sales = region_product_data[i-1]['\n                                          ^\nSyntaxError: unterminated string literal (detected at line 16)",
+          "what_agent_did": "LLM generated and executed Python code for narrative_generation",
+          "key_facts_produced": [
+            "Error Type: SyntaxError",
+            "File Path: c:\\\\Users\\\\t-ashende\\\\Documents\\\\evaluator\\\\results\\\\workspace\\\\trace_002_qwen\\\\_step_code.py",
+            "Line Number: 16",
+            "Error Message: unterminated string literal (detected at line 16)",
+            "Problematic Line: prev_sales = region_product_data[i-1]['",
+            "Execution Status: Failed"
+          ]
+        }
+      ],
+      "context_manifest": {
+        "facts_produced_in_excel_step2": [],
+        "facts_present_in_word_output": [],
+        "facts_lost_at_boundary": [],
+        "boundary": "Excel\u2192Word (Step 3)",
+        "context_loss_detected": false
+      },
+      "word_output_actual_text": {
+        "executive_summary": "Placeholder text for this section.",
+        "anomaly_section": "Placeholder text for this section.",
+        "recommendations": [
+          "Placeholder text for this section."
+        ],
+        "full_text_preview": "Executive Summary Placeholder text for this section. Business Performance Placeholder text for this section. Anomaly Analysis Placeholder text for this section. Recommendations Placeholder text for this section."
+      },
+      "word_doc_path": "c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_qwen\\report.docx",
+      "workspace": "c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_qwen"
+    },
+    "step_results": [
+      {
+        "step_number": 1,
+        "app": "Excel",
+        "action_type": "data_parsing",
+        "step": {
+          "step_number": 1,
+          "app": "Excel",
+          "action_type": "data_parsing",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "row_count: 216\ncolumns: ['Month', 'Region', 'Product', 'Revenue', 'Units_Sold']\ndtypes: {'Month': 'str', 'Region': 'str', 'Product': 'str', 'Revenue': 'int64', 'Units_Sold': 'int64'}\nmissing_values: 0\nduplicates: 0",
+          "what_agent_did": "LLM generated and executed Python code for data_parsing",
+          "key_facts_produced": [
+            "Number of rows: 216",
+            "Number of columns: 5 (Month, Region, Product, Revenue, Units_Sold)",
+            "Numeric columns: Revenue (int64), Units_Sold (int64)",
+            "Missing values: 0 (None present)",
+            "Duplicates: 0 (None present)"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must load the correct number of rows and validate all expected columns are present",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must detect and report any missing values or data quality issues (nulls, non-positive values, duplicates)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must apply correct month ordering or time-series preparation for downstream analysis",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 2,
+        "app": "Excel",
+        "action_type": "computation",
+        "step": {
+          "step_number": 2,
+          "app": "Excel",
+          "action_type": "computation",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "[EXECUTION FAILED] File \"c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_qwen\\_step_code.py\", line 2\n    Okay, let's tackle this problem step by step. The user wants me to write Python code for Step 2, which is the computation part of analyzing sales data. The task includes loading the Excel file, c",
+          "what_agent_did": "LLM generated and executed Python code for computation",
+          "key_facts_produced": [
+            "execution_status: failed",
+            "file_path: c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_qwen\\_step_code.py",
+            "error_line: 2",
+            "error_type: syntax_error",
+            "error_message: unterminated string or comment",
+            "contains_comment_block: true"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must compute the correct total revenue and key KPIs (best/worst month, regional shares)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must perform anomaly detection at Region x Product x Month granularity, not just aggregate level",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must detect the planted anomaly specified in the ground truth (if one exists), or correctly report no anomaly on clean data",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.7,
+              "rationale": "anomaly detection status unclear from key_facts"
+            }
+          ],
+          "step_score": 0.8333,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 3,
+        "app": "Excel\u2192Word",
+        "action_type": "context_handoff",
+        "step": {
+          "step_number": 3,
+          "app": "Excel\u2192Word",
+          "action_type": "context_handoff",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "handoff_complete: true\nSaved keys: ['error_type', 'error_message', 'file_path', 'line_number', 'description']",
+          "what_agent_did": "LLM generated and executed Python code for context_handoff",
+          "key_facts_produced": [
+            "handoff_complete: true",
+            "saved_keys_count: 5",
+            "saved_key_1: error_type",
+            "saved_key_2: error_message",
+            "saved_key_3: file_path",
+            "saved_key_4: line_number",
+            "saved_key_5: description"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Agent must transfer all key computed facts (KPIs, anomaly findings) into the Word script context without loss",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Agent must resolve any errors (e.g. KeyError, NameError) before handoff, not pass broken state",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Agent must include chart generation and pass chart paths to the Word builder",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 4,
+        "app": "Word",
+        "action_type": "report_structuring",
+        "step": {
+          "step_number": 4,
+          "app": "Word",
+          "action_type": "report_structuring",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "Executive Summary\nBusiness Performance\nAnomaly Analysis\nRecommendations",
+          "what_agent_did": "LLM generated and executed Python code for report_structuring",
+          "key_facts_produced": [
+            "Executive Summary: Present",
+            "Business Performance: Present",
+            "Anomaly Analysis: Present",
+            "Recommendations: Present"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Report must contain a dedicated section for anomaly findings if any were detected in Step 2",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Report must include appropriate sections for the user's stated goal (regional/product breakdown, KPI table, etc.)",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Report sections must follow a logical order: summary -> analysis -> anomalies -> recommendations",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      },
+      {
+        "step_number": 5,
+        "app": "Word",
+        "action_type": "narrative_generation",
+        "step": {
+          "step_number": 5,
+          "app": "Word",
+          "action_type": "narrative_generation",
+          "latency_observed": "real execution (code_exec_agent)",
+          "tools_called": [
+            "python code executed via subprocess"
+          ],
+          "output": "[EXECUTION FAILED] File \"c:\\Users\\t-ashende\\Documents\\evaluator\\results\\workspace\\trace_002_qwen\\_step_code.py\", line 16\n    prev_sales = region_product_data[i-1]['\n                                          ^\nSyntaxError: unterminated string literal (detected at line 16)",
+          "what_agent_did": "LLM generated and executed Python code for narrative_generation",
+          "key_facts_produced": [
+            "Error Type: SyntaxError",
+            "File Path: c:\\\\Users\\\\t-ashende\\\\Documents\\\\evaluator\\\\results\\\\workspace\\\\trace_002_qwen\\\\_step_code.py",
+            "Line Number: 16",
+            "Error Message: unterminated string literal (detected at line 16)",
+            "Problematic Line: prev_sales = region_product_data[i-1]['",
+            "Execution Status: Failed"
+          ]
+        },
+        "rubric": {
+          "criteria": [
+            {
+              "id": "C1",
+              "description": "Narrative must explicitly name the planted anomaly (if one exists) with specific numbers, not just generic observations",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C2",
+              "description": "Recommendations must include actionable follow-up for any anomalies detected, not just generic advice",
+              "rationale": "mock rubric"
+            },
+            {
+              "id": "C3",
+              "description": "Executive summary must accurately reflect the dataset state -- must NOT claim 'no anomalies' when a planted anomaly exists",
+              "rationale": "mock rubric"
+            }
+          ],
+          "_model": "mock"
+        },
+        "grade": {
+          "criterion_grades": [
+            {
+              "id": "C1",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C2",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            },
+            {
+              "id": "C3",
+              "pass": true,
+              "score": 0.9,
+              "rationale": "Step appears to have completed successfully"
+            }
+          ],
+          "step_score": 0.9,
+          "step_pass": true,
+          "failure_type": "null",
+          "_model": "mock"
+        }
+      }
+    ],
+    "plan_result": {
+      "plan_score": 0.6475,
+      "issues": [
+        "Planted anomaly not properly reported in Word output. Products near anomaly context: [], matched months: ['Mar']. Planted: 'Planted anomaly: South/Product_B March Revenue dropped from 37,655 (Feb) to 22,216 (Mar) \u2014 41% decli'"
+      ],
+      "metric_breakdown": {
+        "app_coverage": 1.0,
+        "sequence_validity": 1.0,
+        "anomaly_recall": 0.0,
+        "false_positive_check": 1.0,
+        "plan_quality": 0.65,
+        "plan_quality_rationale": "Plan is on-topic but vague"
+      }
+    }
+  }
+}
