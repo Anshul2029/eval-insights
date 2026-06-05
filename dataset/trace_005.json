@@ -1,0 +1,151 @@
+{
+  "trace_id": "trace_005",
+  "run_date": "2026-04-25",
+  "dataset_file": "05_multiple_anomalies.xlsx",
+  "user_prompt": "Find any unusual patterns and write a word report",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted 1: South/Product_B March 45% drop. Planted 2: West/Product_D August +110% spike. Planted 3: North/Product_F Sep-Nov gradual decline. Organic: South/Product_E Aug Revenue 20,000."
+  },
+  "agent_plan": "Analyse data for anomalies, focusing on outliers in revenue, units, and price. Generate Word report.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "pandas.read_excel",
+        "pd.to_numeric coerce",
+        "Revenue/Units_Sold derived",
+        "month numeric mapping",
+        "global z-score"
+      ],
+      "output": "216 rows \u00d7 5 columns. Price_per_Unit derived. Month_Num mapping applied. Global z-scores computed.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]",
+        "price_per_unit_derived: true",
+        "total_revenue: 8,330,663",
+        "correlation: 0.960"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 20 seconds",
+      "tools_called": [
+        "global z-score |z|>=2.5",
+        "MoM pct_change per Region\u00d7Product",
+        "expected revenue = Units \u00d7 median price",
+        "within-group Residual_z",
+        "composite anomaly score",
+        "monthly impact analysis"
+      ],
+      "output": "Top anomaly: North/Product_F Nov (score=9.22, price_z=-9.22). Second: North/Product_F Oct (score=6.98). Third: West/Product_D Aug (score=4.68, revenue_z=+4.35, units_z=+4.68). Fourth: South/Product_E Aug (score=4.44). Fifth: South/Product_B Mar (score=3.31). MoM swings: West/Product_D Aug +110%, South/Product_B Mar -45%. Impact: normalising adds +14,910 Oct (+2.1%), +19,116 Nov (+2.6%).",
+      "key_facts_produced": [
+        "anomaly_1: Nov | North | Product_F | price_z=-9.22 | score=9.22",
+        "anomaly_2: Oct | North | Product_F | price_z=-6.98 | score=6.98",
+        "anomaly_3: Aug | West | Product_D | revenue_z=+4.35 | units_z=+4.68 | score=4.68",
+        "anomaly_4: Aug | South | Product_E | score=4.44",
+        "anomaly_5: Mar | South | Product_B | score=3.31",
+        "mom_swing_westProductD_aug: +110%",
+        "mom_swing_southProductB_mar: -45%",
+        "impact_oct: +14,910 (+2.1%)",
+        "impact_nov: +19,116 (+2.6%)"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 8 seconds",
+      "tools_called": [
+        "matplotlib.savefig \u2014 3 charts",
+        "python-docx Document"
+      ],
+      "output": "3 charts generated. All anomaly rankings, MoM swings, and impact analysis passed into Word context.",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "all_5_anomalies_passed: true",
+        "impact_analysis_passed: true",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 6 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_paragraph, add_table, add_picture"
+      ],
+      "output": "7-section report plus appendix. Anomaly ranking table (12 rows), MoM swings table, impact analysis table, 3 charts. Methods appendix.",
+      "key_facts_produced": [
+        "sections: 7 plus appendix",
+        "anomaly_ranking_table: present (12 rows)",
+        "mom_swings_table: present",
+        "impact_table: present",
+        "methods_appendix: present"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Narrative names all 4 anomalies. North/Product_F framed as most suspicious (price 45.6% below median). West/Product_D framed as possible promo/bulk order. South anomalies framed as stock-out/returns. Impact quantified.",
+      "key_facts_produced": [
+        "exec_summary: 4 unusual records: North/Product_F Oct-Nov (low price), West/Product_D Aug (spike), South/Product_E Aug (low revenue), South/Product_B Mar (low revenue). Normalising adds ~2.1% Oct, ~2.6% Nov.",
+        "anomaly_1: North/Product_F Nov Revenue 22,768, implied price 134.72 (score 9.22)",
+        "anomaly_2: North/Product_F Oct Revenue 28,461, implied price 162.63 (score 6.98)",
+        "anomaly_3: West/Product_D Aug Revenue 68,596, units 266 (score 4.68)",
+        "anomaly_4: South/Product_E Aug Revenue 20,000 (score 4.44)",
+        "anomaly_5: South/Product_B Mar Revenue 20,710 (score 3.31)",
+        "recommendation_1: Validate North/Product_F Oct-Nov pricing.",
+        "recommendation_2: Investigate West/Product_D Aug spike.",
+        "recommendation_3: Investigate South anomalies for stock-outs or booking delays.",
+        "recommendation_4: Add automated QA rules."
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "anomaly_NorthProductF_Nov: score=9.22, price 134.72",
+      "anomaly_WestProductD_Aug: score=4.68, +110% spike",
+      "anomaly_SouthProductB_Mar: score=3.31, -45%",
+      "anomaly_SouthProductE_Aug: score=4.44",
+      "impact_oct: +2.1%, impact_nov: +2.6%"
+    ],
+    "facts_present_in_word_output": [
+      "all_5_anomalies: PRESENT",
+      "north_productF_pricing: PRESENT",
+      "west_productD_spike: PRESENT",
+      "impact_figures: PRESENT"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "4 unusual records: North/Product_F Oct-Nov (low implied price), West/Product_D Aug (large spike), South/Product_E Aug (low revenue), South/Product_B Mar (low revenue). Normalising adds ~2.1% Oct, ~2.6% Nov.",
+    "anomaly_section": "North/Product_F Nov: Revenue 22,768, implied price 134.72 (score 9.22). North/Product_F Oct: Revenue 28,461, implied price 162.63 (score 6.98). West/Product_D Aug: Revenue 68,596, units 266 (score 4.68). South/Product_E Aug: Revenue 20,000 (score 4.44). South/Product_B Mar: Revenue 20,710 (score 3.31).",
+    "recommendations": [
+      "Validate North/Product_F Oct-Nov pricing.",
+      "Investigate West/Product_D Aug spike.",
+      "Investigate South/Product_E Aug and South/Product_B Mar.",
+      "Add automated QA rules for price deviation and MoM swings."
+    ]
+  }
+}

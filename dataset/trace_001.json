@@ -1,0 +1,151 @@
+{
+  "trace_id": "trace_001",
+  "run_date": "2026-04-25",
+  "dataset_file": "01_clean_baseline.xlsx",
+  "user_prompt": "Analyse this sales data and create a Word report for leadership",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "No planted anomaly. Organic outliers present: South/Product_B Mar (z=-2.84), South/Product_E Aug (z=-2.94), North/Product_B Nov (z=+2.36), North/Product_C Dec (z=+2.36), South/Product_D Jul (z=+2.06)"
+  },
+  "agent_plan": "Preparing to analyze data. Planning to read the Excel file, compute key metrics, and create a Word report summarising insights, trends, and recommendations for leadership.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 3 seconds",
+      "tools_called": [
+        "pandas.read_excel",
+        "pd.Categorical"
+      ],
+      "output": "216 rows \u00d7 5 columns loaded. All expected columns present. Month_Num mapping applied. Dtypes correct.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]",
+        "month_ordering_applied: true",
+        "null_values: none"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 8 seconds",
+      "tools_called": [
+        "pandas groupby",
+        "pivot_table",
+        "numpy z-score",
+        "pct_change",
+        "H1/H2 split"
+      ],
+      "output": "Total revenue 8,333,861. Best month Nov (749,317), worst month Mar (642,741). North leads regions (35.4%). Product_A leads products (20.1%). Q4 strongest quarter +5.8% QoQ. H2 up 7.2% vs H1. Z-score outliers detected: South/Product_B Mar (z=-2.84), South/Product_E Aug (z=-2.94), North/Product_B Nov (z=+2.36), North/Product_C Dec (z=+2.36), South/Product_D Jul (z=+2.06). March dip root cause: South/Product_B largest negative contributor (-11,655 revenue).",
+      "key_facts_produced": [
+        "total_revenue: 8,333,861",
+        "total_units: 33,196",
+        "best_month: Nov (749,317)",
+        "worst_month: Mar (642,741)",
+        "h2_vs_h1: +7.2%",
+        "regional_leader: North (35.4%)",
+        "product_leader: Product_A (20.1%)",
+        "q4_growth: +5.8% QoQ",
+        "anomaly_detection_method: z-score per Region\u00d7Product, threshold |z|>=2",
+        "anomalies_detected: [South/Product_B Mar z=-2.84, South/Product_E Aug z=-2.94, North/Product_B Nov z=+2.36, North/Product_C Dec z=+2.36, South/Product_D Jul z=+2.06]",
+        "march_root_cause: South/Product_B (-11,655 revenue, -54 units Feb\u2192Mar)"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 10 seconds",
+      "tools_called": [
+        "matplotlib.savefig",
+        "python-docx Document"
+      ],
+      "output": "4 chart PNGs saved. KeyError on Month_Num in outliers sort \u2014 self-corrected, added Month_Num mapping to outliers_df, re-ran successfully. All aggregates, anomaly list, and charts passed into Word script.",
+      "key_facts_produced": [
+        "charts_generated: 4",
+        "error_encountered: KeyError Month_Num",
+        "error_self_corrected: true",
+        "anomaly_list_passed: [South/Product_B Mar, South/Product_E Aug, North/Product_B Nov, North/Product_C Dec, South/Product_D Jul]",
+        "all_kpis_passed: true"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 6 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_table, add_picture"
+      ],
+      "output": "8-section Word document created: Executive Summary, Key Metrics, Growth & Seasonality, Regional Performance, Product Performance, Quarterly View, Data Flags/Anomalies to Investigate, Recommendations, Appendix.",
+      "key_facts_produced": [
+        "sections: 8 plus appendix",
+        "anomaly_section_title: Data Flags / Anomalies to Investigate",
+        "charts_embedded: 4",
+        "structure: summary\u2192metrics\u2192growth\u2192regional\u2192product\u2192quarterly\u2192anomalies\u2192recommendations\u2192appendix"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 4 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Executive summary names South/Product_E Aug and Product_B volatility explicitly. Anomaly section lists all 5 outliers with z-scores. Recommendation 1 names South/Product_B March. Recommendation 5 proposes automating monthly z-score monitoring.",
+      "key_facts_produced": [
+        "exec_summary: Full-year revenue 8,333,861 across 33,196 units. H2 up 7.2% vs H1. Peak Nov (749,317), trough Mar (642,741). North 35.4%, West 33.9%, South 30.6%. Product_A leads (20.1%). Two notable negative anomalies in South: Product_B in Mar and Product_E in Aug.",
+        "anomaly_narrative: March declined -3.6% vs February. Biggest negative contributor South/Product_B (-11,655 revenue, -54 units).",
+        "recommendation_1: Investigate South/Product_B March \u2014 check stock-outs, promotion rollback, channel disruption, or data capture issues.",
+        "recommendation_2: Investigate South/Product_E August drop.",
+        "recommendation_5: Operationalize anomaly monitoring \u2014 automate monthly z-score checks by region-product."
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue: 8,333,861",
+      "best_month: Nov (749,317)",
+      "worst_month: Mar (642,741)",
+      "h2_vs_h1: +7.2%",
+      "regional_leader: North (35.4%)",
+      "anomaly_South_ProductB_Mar: z=-2.84, revenue 26,000",
+      "anomaly_South_ProductE_Aug: z=-2.94, revenue 20,000",
+      "march_root_cause: South/Product_B (-11,655)"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT",
+      "best_month_Nov: PRESENT",
+      "worst_month_Mar: PRESENT",
+      "h2_vs_h1: PRESENT",
+      "regional_leader_North: PRESENT",
+      "anomaly_South_ProductB_Mar: PRESENT",
+      "anomaly_South_ProductE_Aug: PRESENT",
+      "march_root_cause: PRESENT"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Full-year revenue 8,333,861 across 33,196 units (avg 251.1/unit). H2 up 7.2% vs H1. Peak month Nov (749,317), trough Mar (642,741). North 35.4%, West 33.9%, South 30.6%. Product_A leads (20.1%). Two notable negative anomalies in South: Product_B in Mar and Product_E in Aug.",
+    "anomaly_section": "March declined -3.6% vs February. Biggest negative contributor South/Product_B (-11,655 revenue, -54 units). Statistical outliers (|z|>=2): South/Product_E Aug z=-2.94, South/Product_B Mar z=-2.84, North/Product_C Dec z=+2.36, North/Product_B Nov z=+2.36, South/Product_D Jul z=+2.06.",
+    "recommendations": [
+      "Investigate South/Product_B March drop.",
+      "Investigate South/Product_E August drop.",
+      "Lean into Q4 momentum.",
+      "Protect Product_A leadership.",
+      "Operationalize anomaly monitoring."
+    ]
+  }
+}

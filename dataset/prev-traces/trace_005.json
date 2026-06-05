@@ -1,0 +1,209 @@
+{
+  "trace_id": "trace_005",
+  "run_date": "2026-04-25",
+  "dataset_file": "05_multiple_anomalies.xlsx",
+  "dataset_variant": "multiple_anomalies",
+  "user_prompt": "Find any unusual patterns and write a word report",
+
+  "source_data_summary": {
+    "rows": 216,
+    "columns": ["Month", "Region", "Product", "Revenue", "Units_Sold"],
+    "months": 12,
+    "regions": ["North", "South", "West"],
+    "products": ["Product_A", "Product_B", "Product_C", "Product_D", "Product_E", "Product_F"],
+    "ground_truth_anomalies": {
+      "planted_1": "South/Product_B March: revenue drop ~45% vs series average (same family as traces 001-002 but different magnitude here)",
+      "planted_2": "West/Product_D August: revenue spike +110% vs prior month (positive anomaly)",
+      "planted_3": "North/Product_F Sep-Nov: gradual multi-month decline",
+      "organic": "South/Product_E August: Revenue 20,000 (same organic outlier present in all variants)"
+    }
+  },
+
+  "agent_plan": "Preparing to analyze the Excel data for anomalies, focusing on outliers in revenue, units, and price. Will then generate a Word report with insights and charts.",
+
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 5 seconds — clean single load, no environment errors",
+      "what_agent_did": "Loaded 05_multiple_anomalies.xlsx via pandas.read_excel. Stripped column whitespace. Converted Revenue and Units_Sold to numeric via pd.to_numeric with errors=coerce. Computed Price_per_Unit = Revenue / Units_Sold. Mapped Month to Month_Num (Jan=1 to Dec=12). Computed global z-scores for Revenue, Units_Sold, and Price_per_Unit.",
+      "tools_called": [
+        "pandas.read_excel",
+        "pd.to_numeric coerce",
+        "Revenue/Units_Sold derived column",
+        "month numeric mapping",
+        "global z-score computation"
+      ],
+      "output": "216 rows × 5 columns loaded. All expected columns present. Price_per_Unit computed. Month_Num mapping applied. Global z-scores for 3 metrics computed.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]",
+        "price_per_unit_derived: true",
+        "global_zscores_computed: [z_Revenue, z_Units_Sold, z_Price_per_Unit]",
+        "total_revenue: 8,330,663",
+        "total_units: 33,335",
+        "revenue_units_correlation: 0.960",
+        "price_mean: 249.25",
+        "price_std: 12.42",
+        "price_min: 134.72",
+        "price_max: 263.23"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 20 seconds — most complex computation pipeline in the trace set, multiple layered methods",
+      "what_agent_did": "Ran 5 sequential computation blocks: (1) Global outlier detection — flagged rows with any metric |z|>=2.5. (2) MoM change computation per Region×Product — flagged MoM swings >=40% or <=-40% in Revenue or Units. (3) Expected revenue baseline — computed median Price_per_Unit per Region×Product, derived Expected_Revenue = Units × Median_Price, computed Revenue_Residual and Residual_z within each group. (4) Composite Anomaly Score — max of all |z| values (Revenue, Units, Price, Residual) per row. Top 12 anomalies ranked. (5) Impact analysis — for anomalies with Residual_z>=3 or price z<=-5, replaced revenue with expected revenue, computed monthly actual vs adjusted totals and difference.",
+      "tools_called": [
+        "global z-score threshold |z|>=2.5",
+        "groupby diff and pct_change for MoM per Region×Product",
+        "groupby median price per Region×Product",
+        "expected revenue = Units × median price",
+        "within-group Residual_z standardisation",
+        "numpy.maximum.reduce for composite anomaly score",
+        "monthly actual vs adjusted impact comparison"
+      ],
+      "output": "Top anomaly: North/Product_F Nov (anomaly_score=9.22, price_z=-9.22 — extreme price drop). Second: North/Product_F Oct (anomaly_score=6.98, price_z=-6.98). Third: West/Product_D Aug (anomaly_score=4.68, revenue_z=+4.35, units_z=+4.68 — major spike). Fourth: South/Product_E Aug (anomaly_score=4.44, revenue_z=-2.69, price_z=-4.44). Fifth: South/Product_B Mar (anomaly_score=3.31, revenue_z=-2.59, units_z=-2.48, Residual_z=-3.31). MoM swings >=40%: West/Product_D Aug +110% revenue, +98.5% units; South/Product_E Sep +78.8% recovery; South/Product_B Apr +75.4% recovery; Dec/North/Product_F +71.3% recovery. Impact analysis: normalising anomalies would increase Oct totals by 14,910 (+2.1%) and Nov totals by 19,116 (+2.6%).",
+      "key_facts_produced": [
+        "anomaly_1: Nov | North | Product_F | Revenue 22,768 | Units 169 | Price_per_Unit 134.72 | price_z=-9.22 | Residual_z=-2.54 | score=9.22",
+        "anomaly_2: Oct | North | Product_F | Revenue 28,461 | Units 175 | Price_per_Unit 162.63 | price_z=-6.98 | Residual_z=-1.88 | score=6.98",
+        "anomaly_3: Aug | West | Product_D | Revenue 68,596 | Units 266 | Price_per_Unit 257.88 | revenue_z=+4.35 | units_z=+4.68 | Residual_z=+3.31 | score=4.68",
+        "anomaly_4: Aug | South | Product_E | Revenue 20,000 | Units 103 | Price_per_Unit 194.17 | revenue_z=-2.69 | price_z=-4.44 | Residual_z=-3.31 | score=4.44",
+        "anomaly_5: Mar | South | Product_B | Revenue 20,710 | Units 95 | Price_per_Unit 218.00 | revenue_z=-2.59 | units_z=-2.48 | Residual_z=-3.31 | score=3.31",
+        "planted_anomaly_1_caught: TRUE — South/Product_B Mar detected (score=3.31)",
+        "planted_anomaly_2_caught: TRUE — West/Product_D Aug detected as top spike (score=4.68)",
+        "planted_anomaly_3_caught: TRUE — North/Product_F Oct+Nov detected as top 2 anomalies (scores 9.22 and 6.98)",
+        "organic_anomaly_caught: TRUE — South/Product_E Aug detected (score=4.44)",
+        "all_3_planted_anomalies_detected: TRUE",
+        "mom_swing_westProductD_aug: +110.0% revenue, +98.5% units",
+        "mom_swing_southProductB_mar: -45.0% revenue, -36.2% units",
+        "mom_swing_southProductE_aug: -42.7% revenue, -26.4% units",
+        "impact_oct_normalization: +14,910 revenue (+2.1%)",
+        "impact_nov_normalization: +19,116 revenue (+2.6%)",
+        "median_price_northProductF: 247.83",
+        "reported_price_northProductF_nov: 134.72 (45.6% below median)",
+        "composite_anomaly_scoring_used: true — max of all absolute z-scores",
+        "anomaly_detection_methods_used: [global z-score, MoM pct_change per group, expected_revenue residual z-score, composite score]"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel→Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 8 seconds",
+      "what_agent_did": "Generated 3 chart PNG files: total_revenue_by_month.png (monthly total line), revenue_by_region.png (region lines by month), price_per_unit_hist.png (price distribution histogram). Passed top_anom dataframe (12 rows with anomaly scores), mom_tbl (MoM swings), month_compare (actual vs adjusted monthly totals), and summary_stats dictionary into Word builder.",
+      "tools_called": [
+        "matplotlib.pyplot.savefig — 3 charts",
+        "python-docx Document",
+        "top_anom DataFrame passed",
+        "mom_tbl DataFrame passed",
+        "month_compare DataFrame passed",
+        "summary_stats dict passed"
+      ],
+      "output": "3 charts generated. All computed tables and summary stats passed into Word context. Anomaly rankings, MoM swings, and impact analysis all preserved.",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "chart_1: total_revenue_by_month.png",
+        "chart_2: revenue_by_region.png",
+        "chart_3: price_per_unit_hist.png",
+        "top_anomalies_table_passed: 12 rows with scores",
+        "mom_swings_table_passed: 7 rows >=40%",
+        "impact_analysis_table_passed: 12 months actual vs adjusted",
+        "all_4_anomalies_passed_to_word: true",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 6 seconds",
+      "what_agent_did": "Created Word document with 7 sections plus appendix: Executive Summary, High-level Patterns (3 charts), Pricing/Mix Signals, Top Anomalous Records (ranked table 12 rows), Sudden MoM Swings >=40% (table), Estimated Impact on Monthly Totals (actual vs adjusted table), Recommended Follow-ups (4 numbered), Appendix: Methods Used. Three embedded tables from computed dataframes.",
+      "tools_called": [
+        "python-docx Document, add_heading, add_paragraph, add_table, add_picture",
+        "custom add_df_table helper function"
+      ],
+      "output": "Unusual_Patterns_Report.docx created. 7 sections plus appendix. 3 tables embedded (anomaly ranking, MoM swings, impact analysis). 3 charts embedded. Methods appendix documents all 4 detection approaches.",
+      "key_facts_produced": [
+        "sections_count: 7 plus appendix",
+        "anomaly_ranking_table_present: true — 12 rows with composite score",
+        "mom_swings_table_present: true",
+        "impact_analysis_table_present: true",
+        "methods_appendix_present: true — documents all 4 detection methods",
+        "structure_order: exec_summary → patterns → pricing_signals → anomaly_table → mom_swings → impact → recommendations → appendix"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 5 seconds",
+      "what_agent_did": "Wrote executive summary naming all 4 unusual records explicitly: North/Product_F Oct and Nov (very low implied price), West/Product_D Aug (large spike), South/Product_E Aug (low revenue), South/Product_B Mar (low revenue). Stated normalisation impact: Oct +2.1%, Nov +2.6%. Wrote pricing section: price clusters around 249.2 (std 12.4), extreme low 134.72 concentrated in North/Product_F Oct-Nov, characterised as possible discount, unit-of-measure change, or revenue entry issue. Wrote 4 numbered recommendations. Wrote 4-bullet methods appendix.",
+      "tools_called": ["python-docx paragraph and run formatting"],
+      "output": "Narrative names all 4 anomalies explicitly. North/Product_F framed as most suspicious (implied price 45.6% below median). West/Product_D framed as possible promo/bulk order. South anomalies framed as stock-out/returns/booking delays. Impact quantified as 2.1% and 2.6% monthly under-reporting.",
+      "key_facts_produced": [
+        "exec_summary_text: Dataset contains 216 rows covering 12 months, 3 regions, 6 products. Revenue and Units_Sold strongly correlated (r=0.96). Four records stand out: (a) very low implied price for North/Product_F in Oct and Nov; (b) large spike for West/Product_D in Aug; (c) unusually low revenue for South/Product_E in Aug; (d) unusually low revenue for South/Product_B in Mar. If extreme anomalies normalised, monthly revenue increases ~2.1% Oct and ~2.6% Nov.",
+        "pricing_narrative: Implied price-per-unit mostly clustered near 249.2 (std 12.4), extreme lows to 134.72. Lowest implied prices concentrated in North/Product_F Oct-Nov, inconsistent with rest of portfolio, likely indicates special discount, unit-of-measure change, or revenue entry issue.",
+        "anomaly_1_narrative: North/Product_F Nov — Revenue 22,768, Units 169, implied price 134.72 (anomaly score 9.22)",
+        "anomaly_2_narrative: North/Product_F Oct — Revenue 28,461, Units 175, implied price 162.63 (anomaly score 6.98)",
+        "anomaly_3_narrative: West/Product_D Aug — Revenue 68,596, Units 266 (major spike, anomaly score 4.68)",
+        "anomaly_4_narrative: South/Product_E Aug — Revenue 20,000, Units 103 (anomaly score 4.44)",
+        "anomaly_5_narrative: South/Product_B Mar — Revenue 20,710, Units 95 (anomaly score 3.31)",
+        "recommendation_1: Validate North/Product_F Oct and Nov — implied price far below typical, check missing digits, currency mismatch, or unit-of-measure change.",
+        "recommendation_2: Investigate West/Product_D Aug — revenue and units nearly double MoM, confirm promo/bulk order/contract.",
+        "recommendation_3: Investigate South/Product_E Aug and South/Product_B Mar — sharp drops, check stock-outs, returns, or booking delays.",
+        "recommendation_4: Add automated QA rules — alert on price deviation >3σ from product-region median, MoM change >40%, cross-check revenue vs units×expected price band.",
+        "all_planted_anomalies_in_narrative: TRUE — South/Product_B Mar, West/Product_D Aug, North/Product_F Oct-Nov all named",
+        "organic_anomaly_in_narrative: TRUE — South/Product_E Aug named"
+      ]
+    }
+  ],
+
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "anomaly_northProductF_nov: Revenue 22,768 | price 134.72 | score=9.22",
+      "anomaly_northProductF_oct: Revenue 28,461 | price 162.63 | score=6.98",
+      "anomaly_westProductD_aug: Revenue 68,596 | units 266 | score=4.68 (positive spike)",
+      "anomaly_southProductE_aug: Revenue 20,000 | score=4.44",
+      "anomaly_southProductB_mar: Revenue 20,710 | score=3.31",
+      "impact_oct: +14,910 if normalised (+2.1%)",
+      "impact_nov: +19,116 if normalised (+2.6%)",
+      "correlation: 0.960"
+    ],
+    "facts_present_in_word_output": [
+      "all_5_anomalies: PRESENT — named in exec summary and anomaly table",
+      "north_productF_price_signal: PRESENT — pricing section dedicated to it",
+      "west_productD_spike: PRESENT — named as large spike",
+      "impact_2.1pct_oct: PRESENT — exec summary",
+      "impact_2.6pct_nov: PRESENT — exec summary",
+      "correlation_0.96: PRESENT — exec summary",
+      "mom_swings_table: PRESENT — section 5",
+      "impact_table: PRESENT — section 6"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel→Word (Step 3)",
+    "context_loss_detected": false
+  },
+
+  "word_output_actual_text": {
+    "executive_summary": "Dataset contains 216 rows covering 12 months, 3 regions, 6 products. Revenue and Units_Sold are strongly correlated (Pearson r ≈ 0.96), indicating revenue usually scales with volume. Four records stand out as the most unusual: (a) very low implied price per unit for North/Product_F in Oct and Nov; (b) a large spike for West/Product_D in Aug; (c) unusually low revenue for South/Product_E in Aug; (d) unusually low revenue for South/Product_B in Mar. If the extreme anomalies are normalized to each product-region's typical price-per-unit, total monthly revenue would increase by ~2.1% in Oct and ~2.6% in Nov, suggesting potential under-reporting for North/Product_F in those months.",
+    "pricing_section": "Implied price-per-unit is mostly clustered near ~249.2 (std ~12.4), but has extreme lows down to 134.72. The lowest implied prices are concentrated in North/Product_F (Oct, Nov), which is inconsistent with the rest of the portfolio and likely indicates either a special discount, a unit-of-measure change, or a revenue entry issue.",
+    "recommendations": [
+      "Validate North/Product_F revenue for Oct and Nov: implied price-per-unit is far below typical; check for missing digits, currency mismatch, or a one-time deep discount.",
+      "Investigate West/Product_D in Aug: both revenue and units nearly double MoM; confirm if this aligns with a promotion, bulk order, or a one-off contract.",
+      "Investigate South/Product_E in Aug and South/Product_B in Mar: both show sharp drops; check for stock-outs, returns, or booking delays.",
+      "Add automated QA rules: (a) alert when implied price-per-unit deviates >3σ from product-region median; (b) alert when MoM change >40%; (c) cross-check revenue ≈ units × expected price band."
+    ]
+  },
+
+  "notable_observations": {
+    "all_3_planted_anomalies_caught": "TRUE. South/Product_B Mar (rank 5, score 3.31), West/Product_D Aug (rank 3, score 4.68), North/Product_F Oct+Nov (ranks 1 and 2, scores 9.22 and 6.98). All detected and named in the report.",
+    "novel_detection_method": "This is the first trace to compute a composite anomaly score using max of multiple z-score dimensions. Also the first to compute expected revenue = Units × median price per group and derive residual z-scores — this catches anomalies that look normal on revenue alone but are inconsistent given the units sold.",
+    "north_productF_most_interesting": "North/Product_F Oct-Nov ranked as the top 2 anomalies with scores of 9.22 and 6.98. This is the gradual multi-month decline planted anomaly, but the agent characterised it differently — as an extreme price-per-unit drop (implied price 134.72 vs typical 247.83). The agent found the right rows but interpreted the pattern as possible data entry or unit-of-measure issue rather than a sales decline. Both interpretations are valid given only revenue and units data.",
+    "positive_anomaly_detection": "West/Product_D Aug positive spike (+110% MoM) detected and correctly characterised as a possible promotion or bulk order rather than as a data error. This is appropriately calibrated — not all anomalies are problems.",
+    "impact_quantification": "First trace to compute explicit dollar impact of normalising anomalies (Oct +14,910, Nov +19,116). Gives leadership a concrete number for what the anomaly means for monthly totals.",
+    "comparison_to_other_traces": "Most methodologically sophisticated trace in the set. Uses 4 detection methods simultaneously (global z-score, MoM swing, residual z-score, composite score). No previous trace computed expected revenue or residual z-scores."
+  }
+}

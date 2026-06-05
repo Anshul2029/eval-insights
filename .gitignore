@@ -1,0 +1,26 @@
+# Environment
+.env
+.venv/
+__pycache__/
+
+# Node
+ui/node_modules/
+ui/dist/
+
+# Caches
+eval_insights/.cache/
+
+# Temp directories
+temp_excel/
+temp_raw_traces/
+temp_real_reports/
+temp_reports/
+results/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

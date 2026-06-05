@@ -1,0 +1,16 @@
+[server]
+port = 8502
+baseUrlPath = "insights"
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+
+[theme]
+primaryColor = "#2563eb"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f8fafc"
+textColor = "#1e293b"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false

@@ -1,0 +1,49 @@
+{
+  "trace_id": "step_incomplete",
+  "dataset_file": "sales_q1.csv",
+  "user_prompt": "Produce a report that includes KPIs and anomalies.",
+  "agent_plan": "Compute KPIs and hand off to Word with charts.",
+  "dataset_variant": "with_anomaly",
+  "source_data_summary": {
+    "ground_truth_anomalies": {
+      "planted": "Product_D in May had an unexpected drop"
+    }
+  },
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "what_agent_did": "Loaded and validated data.",
+      "output": "Parsed 200 rows.",
+      "key_facts_produced": [
+        "row_count: 200"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "what_agent_did": "Detected anomaly and saved KPI values.",
+      "output": "Found anomaly for Product_D in May.",
+      "key_facts_produced": [
+        "planted_anomaly_caught: TRUE",
+        "kpi_total_revenue: 900000"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Word",
+      "action_type": "context_handoff",
+      "what_agent_did": "Attempted to build report but failed to include KPIs.",
+      "output": "Report missing anomaly details and charts.",
+      "key_facts_produced": [
+        "anomaly_included_in_report: false",
+        "charts_generated: false"
+      ]
+    }
+  ],
+  "word_output_actual_text": {
+    "body": "Executive summary: KPIs included. (Anomaly details missing)"
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "trace_id": "trace_011",
+  "run_date": "2026-04-26",
+  "dataset_file": "07_inconsistent_months.xlsx",
+  "user_prompt": "Analyse this sales data and create a Word report for leadership",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted: South/Product_B March Revenue 22,216. Data quality: February stored as '02', March as 'Mar' \u2014 inconsistent formats."
+  },
+  "agent_plan": "Load file, compute full year analysis, create Word report.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 4 seconds",
+      "tools_called": [
+        "pandas.read_excel",
+        "pd.Categorical with standard names only"
+      ],
+      "output": "216 rows loaded. Month ordering applied for standard format rows only. 36 rows with numeric month formats ('02', '03' etc.) not matched \u2014 silently excluded. No warning raised.",
+      "key_facts_produced": [
+        "row_count_loaded: 216",
+        "rows_correctly_ordered: 180",
+        "rows_excluded: 36",
+        "month_inconsistency_detected: false",
+        "silent_data_loss: true"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 7 seconds",
+      "tools_called": [
+        "pandas groupby on 180-row subset",
+        "z-score on incomplete data"
+      ],
+      "output": "Total revenue 7,891,234 (understated \u2014 36 rows missing). February and March totals understated. No anomalies detected \u2014 South/Product_B Mar partially excluded.",
+      "key_facts_produced": [
+        "total_revenue: 7,891,234 (INCORRECT \u2014 should be 8,330,077)",
+        "feb_total: understated",
+        "mar_total: understated",
+        "anomalies_detected: 0"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "matplotlib.savefig",
+        "python-docx Document"
+      ],
+      "output": "All computed facts from 180-row subset passed. Handoff clean but based on incorrect data.",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 4 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_table, add_picture"
+      ],
+      "output": "5-section report. Revenue figures understated. No anomaly section.",
+      "key_facts_produced": [
+        "sections: 5",
+        "anomaly_section: NOT PRESENT"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 3 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Narrative states total revenue 7,891,234 \u2014 understated by 438,843. No anomaly mentioned.",
+      "key_facts_produced": [
+        "exec_summary: Revenue 7,891,234. North leads. Product_A leads. February and March weaker months.",
+        "revenue_figure_correct: false",
+        "anomaly_mentioned: false"
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue: 7,891,234 (INCORRECT)",
+      "anomalies: none detected"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT but INCORRECT",
+      "anomaly: ABSENT"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Revenue 7,891,234. North leads. Product_A leads. February and March weaker months.",
+    "anomaly_section": "NOT PRESENT",
+    "recommendations": [
+      "Invest in North.",
+      "Scale Product_A.",
+      "Investigate February/March weakness."
+    ]
+  }
+}

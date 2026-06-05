@@ -1,0 +1,47 @@
+{
+  "trace_id": "ambiguous_case",
+  "dataset_file": "sales_q1.csv",
+  "user_prompt": "Detect anomalies and write an executive summary.",
+  "agent_plan": "Compute KPIs and craft a narrative.",
+  "dataset_variant": "with_anomaly",
+  "source_data_summary": {
+    "ground_truth_anomalies": {
+      "planted": "Product_F in February had a moderate dip"
+    }
+  },
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "what_agent_did": "Loaded data and normalized dates.",
+      "output": "Parsed 180 rows.",
+      "key_facts_produced": [
+        "row_count: 180"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "what_agent_did": "Performed anomaly detection with soft threshold; unclear signal.",
+      "output": "Possible dip for Product_F in Feb but below high-confidence threshold.",
+      "key_facts_produced": [
+        "planted_anomaly_caught: UNCLEAR"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "what_agent_did": "Wrote cautious language recommending monitoring.",
+      "output": "Report notes a potential dip and suggests monitoring.",
+      "key_facts_produced": [
+        "planted_anomaly_in_narrative: UNCLEAR"
+      ]
+    }
+  ],
+  "word_output_actual_text": {
+    "body": "There is a potential dip for Product_F in February; recommend monitoring."
+  }
+}

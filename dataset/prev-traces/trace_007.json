@@ -1,0 +1,179 @@
+{
+  "trace_id": "trace_007",
+  "run_date": "2026-04-25",
+  "dataset_file": "07_inconsistent_months.xlsx",
+  "dataset_variant": "inconsistent_months",
+  "user_prompt": "Compare March vs February performance",
+
+  "source_data_summary": {
+    "rows": 216,
+    "columns": ["Month", "Region", "Product", "Revenue", "Units_Sold"],
+    "months": 12,
+    "regions": ["North", "South", "West"],
+    "products": ["Product_A", "Product_B", "Product_C", "Product_D", "Product_E", "Product_F"],
+    "ground_truth_anomalies": {
+      "planted": "South/Product_B March: Revenue dropped from 37,655 (Feb) to 22,216 (Mar) — 41% decline, same as trace_002",
+      "organic": "South/Product_E August: Revenue 20,000 (same organic outlier present in all variants)",
+      "data_quality_issue": "Inconsistent month labels — February stored as '02', March stored as 'Mar'. Mixed numeric and abbreviated string formats across the dataset."
+    }
+  },
+
+  "agent_plan": "Computing totals from data. Planning to compare totals from March and February using the fetched file. Will compute totals by region and product, then extract key insights.",
+
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 4 seconds — clean single load",
+      "what_agent_did": "Loaded 07_inconsistent_months.xlsx via pandas.read_excel. Cast Month column to string and stripped whitespace. Built two boolean masks: mask_feb matching ['02', '2', 'February', 'Feb'] and mask_mar matching ['03', '3', 'March', 'Mar']. Applied masks to split dataframe into feb (18 rows) and mar (18 rows). Agent explicitly noted in narrative that the file uses inconsistent month labels — 02 for February and Mar for March.",
+      "tools_called": [
+        "pandas.read_excel",
+        "df.Month.astype(str).str.strip()",
+        "isin() mask for multiple month label formats"
+      ],
+      "output": "18 February rows isolated. 18 March rows isolated. Month label inconsistency detected and handled — agent matched both numeric ('02') and string ('Feb'/'February') formats for each month. Inconsistency explicitly noted.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]",
+        "feb_rows_found: 18",
+        "mar_rows_found: 18",
+        "month_label_inconsistency_detected: TRUE",
+        "feb_stored_as: '02' (numeric string)",
+        "mar_stored_as: 'Mar' (abbreviated string)",
+        "inconsistency_handled: TRUE — multi-format isin() mask used",
+        "agent_noted_inconsistency_in_response: TRUE"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 6 seconds — single comprehensive code block",
+      "what_agent_did": "Computed Feb vs Mar summary totals: revenue, units, avg price, and % changes. Computed regional breakdown (North, South, West) for both months with revenue diff and pct change. Computed product breakdown (all 6 products) for both months with revenue diff and pct change. Merged Feb and Mar at Region×Product level to find biggest individual movers — top 5 up and top 5 down by Revenue_Diff.",
+      "tools_called": [
+        "groupby Region Revenue/Units_Sold sum",
+        "groupby Product Revenue/Units_Sold sum",
+        "merge Feb and Mar on Region+Product for row-level comparison",
+        "sort_values for top movers"
+      ],
+      "output": "Feb revenue 666,408 → Mar revenue 638,957 (-27,451, -4.1%). Feb units 2,654 → Mar units 2,513 (-141, -5.3%). Avg price improved Feb 251.10 → Mar 254.26 (+1.3%). North improved +12,875 (+5.7%). South declined -18,871 (-9.2%). West declined -21,455 (-9.2%). Product_B biggest drag -17,020 (-14.1%). Product_D only improver +4,565 (+5.3%). Biggest single negative mover: South/Product_B — Revenue_Feb 37,655 → Revenue_Mar 22,216 (-15,439, -41.0%); Units_Feb 149 → Units_Mar 56 (-93, -62.4%).",
+      "key_facts_produced": [
+        "feb_revenue: 666,408",
+        "mar_revenue: 638,957",
+        "revenue_diff: -27,451 (-4.1%)",
+        "feb_units: 2,654",
+        "mar_units: 2,513",
+        "units_diff: -141 (-5.3%)",
+        "feb_avg_price: 251.10",
+        "mar_avg_price: 254.26",
+        "avg_price_diff: +3.16 (+1.3%)",
+        "north_revenue_change: +12,875 (+5.7%)",
+        "south_revenue_change: -18,871 (-9.2%)",
+        "west_revenue_change: -21,455 (-9.2%)",
+        "product_B_change: -17,020 (-14.1%)",
+        "product_D_change: +4,565 (+5.3%)",
+        "product_A_change: +173 (+0.1%)",
+        "biggest_negative_mover: South/Product_B | Rev_Feb 37,655 → Rev_Mar 22,216 | diff -15,439 (-41.0%) | Units_Feb 149 → Units_Mar 56 | units_diff -93 (-62.4%)",
+        "planted_anomaly_as_biggest_mover: TRUE — South/Product_B is the top negative mover",
+        "top_positive_movers: [North/Product_A +4,727 (+11.0%), North/Product_F +4,677 (+13.3%), North/Product_C +4,113 (+11.6%), West/Product_D +2,859 (+10.5%), South/Product_C +1,798 (+5.4%)]",
+        "top_negative_movers: [South/Product_B -15,439 (-41.0%), West/Product_E -6,603 (-16.0%), West/Product_C -6,220 (-16.2%), West/Product_A -5,366 (-11.0%), South/Product_E -4,290 (-11.7%)]"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel→Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 15 seconds — multiple terminal command attempts before Word generation succeeded",
+      "what_agent_did": "Agent attempted Word generation via terminal commands. Multiple attempts with environment probing before successful document creation. All computed summary stats, regional breakdown, product breakdown, and top/bottom movers passed into document builder.",
+      "tools_called": [
+        "terminal execution attempts (multiple)",
+        "python-docx Document"
+      ],
+      "output": "Word document created after environment probing delay. All computed facts passed into document context. Regional table, product table, top movers tables all included.",
+      "key_facts_produced": [
+        "environment_probing_observed: TRUE — multiple terminal attempts before success",
+        "all_summary_stats_passed: TRUE",
+        "regional_breakdown_passed: TRUE",
+        "product_breakdown_passed: TRUE",
+        "top_positive_movers_passed: TRUE",
+        "top_negative_movers_passed: TRUE",
+        "south_productB_worst_mover_passed: TRUE",
+        "context_loss_at_boundary: FALSE"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 4 seconds",
+      "what_agent_did": "Created Word document with sections: Executive Summary, Overall KPI Comparison (table), Regional Comparison (table), Product Comparison (table), Key Performance Drivers, Top Positive Revenue Movers (table), Top Negative Revenue Movers (table), Conclusion.",
+      "tools_called": ["python-docx Document, add_heading, add_paragraph, add_table"],
+      "output": "March_vs_February_Performance_Report.docx created. Dedicated section for key performance drivers including top positive and negative movers. Tables for regional and product breakdowns.",
+      "key_facts_produced": [
+        "sections_count: 8",
+        "kpi_table_present: TRUE",
+        "regional_table_present: TRUE",
+        "product_table_present: TRUE",
+        "top_movers_sections_present: TRUE",
+        "conclusion_present: TRUE",
+        "structure_order: exec_summary → kpi_table → regional → product → drivers → positive_movers → negative_movers → conclusion"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 3 seconds",
+      "what_agent_did": "Wrote executive summary with 5 bullet points: March revenue decline -4.1%, units decline -5.3%, avg price improvement +1.3%, North improved while South/West declined, biggest negative driver was South/Product_B. Wrote conclusion: March underperformed February, decline concentrated in South and West, North was bright spot, Product_D showed positive momentum, South/Product_B was the single biggest negative driver.",
+      "tools_called": ["python-docx paragraph formatting"],
+      "output": "Narrative explicitly names South/Product_B as biggest negative driver with sharp drop in both revenue and units. Conclusion paragraph restates this finding.",
+      "key_facts_produced": [
+        "exec_summary_text: March revenue was 638,957 versus 666,408 in February, a decline of 27,451 (-4.1%). March units sold were 2,513 versus 2,654 in February, a decline of 141 units (-5.3%). Average revenue per unit rose from 251.1 in February to 254.3 in March, indicating a slightly stronger mix despite lower total volume. North improved month over month, while South and West both declined. The biggest negative driver was South - Product_B, which saw a sharp drop in both revenue and units sold.",
+        "conclusion_text: March underperformed February overall, with lower revenue and lower units sold. The decline was concentrated in the South and West regions, while North was a bright spot. South - Product_B was the single biggest negative driver.",
+        "planted_anomaly_in_narrative: TRUE — South/Product_B named as biggest negative driver in executive summary and conclusion",
+        "month_inconsistency_noted_in_agent_response: TRUE — agent stated in chat response that file uses inconsistent month labels (02 for February, Mar for March)",
+        "month_inconsistency_in_word_report: NOT EXPLICITLY MENTIONED — Word report does not reference the parsing challenge"
+      ]
+    }
+  ],
+
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "feb_revenue: 666,408",
+      "mar_revenue: 638,957",
+      "revenue_decline: -27,451 (-4.1%)",
+      "south_productB_biggest_mover: Rev_Feb 37,655 → Rev_Mar 22,216 (-41.0%)",
+      "north_improvement: +12,875 (+5.7%)",
+      "avg_price_improvement: +1.3%",
+      "product_B_drag: -17,020 (-14.1%)"
+    ],
+    "facts_present_in_word_output": [
+      "feb_vs_mar_revenue: PRESENT (exec summary — 638,957 vs 666,408)",
+      "revenue_decline_4.1pct: PRESENT",
+      "units_decline_5.3pct: PRESENT",
+      "avg_price_improvement_1.3pct: PRESENT",
+      "south_productB_biggest_negative_driver: PRESENT (exec summary and conclusion)",
+      "north_improvement: PRESENT",
+      "regional_breakdown: PRESENT (table)",
+      "product_breakdown: PRESENT (table)"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel→Word (Step 3)",
+    "context_loss_detected": false
+  },
+
+  "word_output_actual_text": {
+    "executive_summary": "March revenue was 638,957 versus 666,408 in February, a decline of 27,451 (-4.1%). March units sold were 2,513 versus 2,654 in February, a decline of 141 units (-5.3%). Average revenue per unit rose from 251.1 in February to 254.3 in March, indicating a slightly stronger mix despite lower total volume. North improved month over month, while South and West both declined. The biggest negative driver was South - Product_B, which saw a sharp drop in both revenue and units sold.",
+    "conclusion": "March underperformed February overall, with lower revenue and lower units sold. The decline was concentrated in the South and West regions, while North was a bright spot. South - Product_B was the single biggest negative driver."
+  },
+
+  "notable_observations": {
+    "inconsistent_month_parsing_handled": "The dataset stored February as '02' (numeric string) and March as 'Mar' (abbreviated string). Agent detected this without any explicit prompt about data quality and correctly handled it using a multi-format isin() mask. This is the parsing robustness test — the agent succeeded.",
+    "inconsistency_mentioned_in_chat_not_report": "Agent explicitly flagged the inconsistency in the chat response ('the file uses inconsistent month labels — 02 for February and Mar for March') but the Word report does not include this observation. The data quality finding was surface-level disclosed but not formally documented.",
+    "prompt_type_is_analytical_comparison": "Unlike other traces which were open-ended ('create a report', 'find anomalies'), this prompt asked a specific comparative question. Agent correctly interpreted this as a Feb-vs-Mar analysis rather than a full-year report.",
+    "planted_anomaly_surfaced_as_business_finding": "South/Product_B March drop (-41.0% revenue, -62.4% units) was not detected as a statistical anomaly here — it was found as the biggest negative business mover in the Feb-vs-Mar comparison. Same row, different detection path. The analytical lens (MoM comparison vs z-score) changes how the anomaly is characterised.",
+    "four_step_trace": "This trace has only 4 steps (no separate anomaly detection step) because the prompt asked for a comparison, not anomaly hunting. The structure differs from other traces. Your rubric generator must recognise prompt intent affects what steps are expected.",
+    "comparison_to_other_traces": "This is the second trace to find South/Product_B March through MoM comparison rather than z-score (trace_006 used pricing z-score, trace_007 uses absolute revenue comparison). Different analytical methods, same anomaly. Shows that the rubric for Step 2 must evaluate the quality of the method used for the stated task, not just whether the right row was found."
+  }
+}

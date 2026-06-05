@@ -1,0 +1,197 @@
+{
+  "trace_id": "trace_004",
+  "run_date": "2026-04-25",
+  "dataset_file": "04_no_anomaly_control.xlsx",
+  "dataset_variant": "no_anomaly_control",
+  "user_prompt": "Find anything unusual in this data and create a Word report",
+
+  "source_data_summary": {
+    "rows": 216,
+    "columns": ["Month", "Revenue", "Units_Sold"],
+    "note": "IMPORTANT — this dataset has only 3 columns, not 5. Region and Product columns are absent. This is structurally different from traces 001-003 which had 5 columns. Agent adapted its analysis to the available columns.",
+    "months": 12,
+    "regions": "NOT PRESENT IN THIS DATASET",
+    "products": "NOT PRESENT IN THIS DATASET",
+    "ground_truth_anomalies": {
+      "planted": "none — this is the no-anomaly negative control variant",
+      "organic": "none planted. Data was smoothed via rolling mean to remove outliers.",
+      "expected_agent_behaviour": "Should find no major anomalies. Should NOT fabricate findings. Minor RPU variation may be flagged but should be characterised as borderline, not critical."
+    }
+  },
+
+  "agent_plan": "Examining the Excel file to identify anomalies, duplicates, and trends. Will compute statistics like revenue per unit and check for missing months while generating a concise report.",
+
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 4 seconds — clean load, no environment errors",
+      "what_agent_did": "Loaded 04_no_anomaly_control.xlsx via pandas.read_excel. Stripped column name whitespace. Validated expected columns — checked for Month, Revenue, Units_Sold. Set Month_num mapping. Converted Revenue and Units_Sold to numeric via pd.to_numeric with errors=coerce. Checked for missing values, duplicate rows, non-positive values. Computed Rev_per_unit = Revenue / Units_Sold. Confirmed all 12 month labels present with no unexpected labels.",
+      "tools_called": [
+        "pandas.read_excel",
+        "df.columns strip",
+        "expected column set check",
+        "pd.to_numeric coerce",
+        "df.isna().sum()",
+        "df.duplicated().sum()"
+      ],
+      "output": "216 rows × 3 columns loaded. Expected columns present. 0 missing values. 0 duplicate rows. 0 non-positive Revenue. 0 non-positive Units_Sold. All 12 month labels present. Rev_per_unit computed.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "column_count: 3",
+        "columns: [Month, Revenue, Units_Sold]",
+        "missing_values: 0",
+        "duplicate_rows: 0",
+        "non_positive_revenue: 0",
+        "non_positive_units: 0",
+        "all_months_present: true",
+        "region_column_present: FALSE — not in this dataset",
+        "product_column_present: FALSE — not in this dataset"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 12 seconds — 4 sequential code blocks",
+      "what_agent_did": "Ran 4 computation blocks: (1) IQR outlier detection on Revenue, Units_Sold, Rev_per_unit — Revenue 0 outliers, Units_Sold 0 outliers, Rev_per_unit 3 outliers below low bound 235.40. (2) Z-score outlier detection |z|>3 on all 3 metrics — 0 outliers on all three. (3) Monthly aggregation — computed revenue_mean, units_mean, rpu_mean per month with MoM % change. Z-score on monthly means — no month has |z|>2 on revenue or units. (4) Jan-to-Dec growth: revenue_mean +11.1%, units_mean +11.2%, rpu_mean -0.05%. Correlation Revenue vs Units_Sold: 0.992. Characterised 3 RPU outliers with z-scores: Aug z=-2.36, Sep z=-2.48, Oct z=-2.46.",
+      "tools_called": [
+        "IQR outlier function (custom)",
+        "z-score outlier detection |z|>3",
+        "pandas groupby monthly aggregation",
+        "pct_change for MoM trends",
+        "z-score on monthly means",
+        "Jan-to-Dec growth calculation",
+        "correlation matrix"
+      ],
+      "output": "No Revenue or Units_Sold outliers by IQR or z-score. 3 minor RPU outliers found in Aug, Sep, Oct (z=-2.36 to -2.48) — below IQR low bound of 235.40. Revenue-Units correlation 0.992 (very strong, consistent pricing). Monthly revenue means rise steadily Jan to Dec (+11.1%). RPU essentially flat (-0.05%). No month-level z-score exceeds |2| for revenue or units means.",
+      "key_facts_produced": [
+        "total_revenue: 8,315,392",
+        "total_units: 33,120",
+        "avg_revenue_per_row: 38,497",
+        "median_revenue_per_row: 37,851.5",
+        "revenue_iqr_outliers: 0",
+        "units_sold_iqr_outliers: 0",
+        "rpu_iqr_outliers: 3",
+        "rpu_outlier_1: Aug | Revenue 30,801 | Units 131 | RPU 235.12 | z=-2.36",
+        "rpu_outlier_2: Sep | Revenue 30,229 | Units 129 | RPU 234.33 | z=-2.48",
+        "rpu_outlier_3: Oct | Revenue 30,250 | Units 129 | RPU 234.50 | z=-2.46",
+        "revenue_zscore_outliers_gt3: 0",
+        "units_zscore_outliers_gt3: 0",
+        "rpu_zscore_outliers_gt3: 0",
+        "revenue_units_correlation: 0.992",
+        "jan_to_dec_revenue_growth: +11.1%",
+        "jan_to_dec_units_growth: +11.2%",
+        "jan_to_dec_rpu_change: -0.05% (essentially flat)",
+        "monthly_mean_zscore_exceeds_2: false for revenue and units",
+        "no_planted_anomaly_detected: TRUE — no major Revenue or Units outlier found",
+        "false_positive_fabricated: FALSE — agent did not invent anomalies",
+        "overall_characterisation: data looks clean and stable"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel→Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 5 seconds",
+      "what_agent_did": "Passed all computed results into Word document builder: summary stats, IQR bounds, RPU outlier table (3 rows), correlation value, monthly aggregation, Jan-Dec growth figures, top 5 and bottom 5 revenue rows. RPU outlier table carried forward with Month, Revenue, Units_Sold, Rev_per_unit values.",
+      "tools_called": [
+        "python-docx Document",
+        "results and dataframes passed directly into Word builder"
+      ],
+      "output": "All computed facts transferred. RPU outlier table with 3 rows passed. Correlation, growth, and monthly stats passed. No context loss.",
+      "key_facts_produced": [
+        "rpu_outlier_table_passed: true — Aug/Sep/Oct rows with RPU values",
+        "correlation_passed: 0.992",
+        "jan_dec_growth_passed: Revenue +11.1%, Units +11.2%, RPU -0.05%",
+        "top5_bottom5_revenue_passed: true",
+        "overall_clean_characterisation_passed: true",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 5 seconds",
+      "what_agent_did": "Created Word document with 6 sections: Dataset Snapshot, Data Quality Checks (missing values, duplicates, non-positive), Unusual Patterns (2 sub-sections: RPU outliers + Revenue-Units relationship), Trends and Context, Extremes (top 5 and bottom 5 revenue rows), Recommended Follow-ups. RPU outlier table embedded with 4 columns.",
+      "tools_called": ["python-docx Document, add_heading, add_table, add_paragraph"],
+      "output": "Unusual_Findings_Report_04_no_anomaly_control.docx created. 6 sections. RPU outlier table embedded. No false anomaly section. No planted anomaly flagged because none exists.",
+      "key_facts_produced": [
+        "sections_count: 6",
+        "data_quality_section_present: true",
+        "rpu_outlier_section_present: true",
+        "revenue_units_relationship_section: true",
+        "trends_context_section: true",
+        "extremes_section: true",
+        "recommendations_section: true",
+        "planted_anomaly_section_present: FALSE — correctly absent",
+        "structure_order: snapshot → quality_checks → unusual_patterns → trends → extremes → recommendations"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 4 seconds",
+      "what_agent_did": "Wrote dataset snapshot confirming 3 columns and all 12 months present. Wrote data quality section confirming 0 missing, 0 duplicates, 0 non-positive values. Wrote RPU outlier section: average RPU 250.39 (std 6.47), IQR bounds low<235.40, flagged 3 rows with interpretation — possible discounts, promotions, or data entry issue. Wrote Revenue-Units relationship section: correlation 0.992, interpreted as stable pricing with volume driving revenue. Wrote trends section: revenue +11.1% Jan to Dec, RPU -0.05% (flat). Wrote takeaway: dataset looks clean and stable, main signal is small set of low-RPU rows in Aug-Oct. Wrote 3 follow-up recommendations.",
+      "tools_called": ["python-docx paragraph formatting"],
+      "output": "Narrative correctly characterises data as clean. RPU outliers flagged as borderline with appropriate uncertainty (possible discounts, promotions, or data entry issue). No false positive. Takeaway explicitly states dataset looks clean.",
+      "key_facts_produced": [
+        "data_quality_narrative: 216 rows, 0 missing, 0 duplicates, 0 non-positive",
+        "rpu_outlier_narrative: Found 3 RPU outlier(s) by IQR. These have unusually low/high RPU compared to the rest of the dataset.",
+        "rpu_outlier_interpretation: These rows may reflect discounts/promotions, a different product mix, or a data entry/unit issue",
+        "correlation_narrative: Correlation between Revenue and Units_Sold: 0.992 (very strong). Revenue changes are overwhelmingly driven by units sold, consistent with largely stable pricing.",
+        "trends_narrative: Revenue mean increased from Jan to Dec by 11.1%. Units mean increased from Jan to Dec by 11.2%. Average RPU changed from Jan to Dec by -0.05% (essentially flat).",
+        "takeaway_text: The dataset looks clean and stable. The main unusual signal is a small set of low-RPU rows in Aug-Oct.",
+        "recommendation_1: Validate the three low-RPU rows (Aug/Sep/Oct): confirm if discounts, promos, or different SKU mix explains lower unit revenue.",
+        "recommendation_2: Add an explicit Date column (YYYY-MM-DD) if available; Month alone limits true time-series anomaly detection.",
+        "recommendation_3: Track Price or Discount fields to explain RPU shifts and reduce false positives in anomaly flags.",
+        "false_positive_fabricated_in_narrative: FALSE",
+        "planted_anomaly_mentioned_in_narrative: FALSE — correctly absent",
+        "overall_verdict_in_narrative: data looks clean and stable"
+      ]
+    }
+  ],
+
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "rpu_outliers: Aug RPU 235.12 | Sep RPU 234.33 | Oct RPU 234.50",
+      "revenue_units_correlation: 0.992",
+      "jan_dec_revenue_growth: +11.1%",
+      "overall_characterisation: clean and stable",
+      "no_major_anomaly_found: true"
+    ],
+    "facts_present_in_word_output": [
+      "rpu_outlier_table: PRESENT — Aug/Sep/Oct with RPU values",
+      "correlation_0.992: PRESENT",
+      "jan_dec_growth_11.1pct: PRESENT",
+      "takeaway_clean_stable: PRESENT",
+      "no_fabricated_anomaly: PRESENT — correctly absent"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel→Word (Step 3)",
+    "context_loss_detected": false
+  },
+
+  "word_output_actual_text": {
+    "data_quality_section": "Missing values: {'Month': 0, 'Revenue': 0, 'Units_Sold': 0}. Duplicate rows: 0. Non-positive values: Revenue=0, Units_Sold=0.",
+    "rpu_outlier_section": "Overall average Revenue per Unit (RPU): 250.39 (std: 6.47). IQR bounds for RPU outliers: low<235.40, high>264.10. Found 3 RPU outlier(s) by IQR. Interpretation: These rows may reflect discounts/promotions, a different product mix, or a data entry/unit issue (e.g., revenue recorded without add-ons, or units counted differently).",
+    "relationship_section": "Correlation between Revenue and Units_Sold: 0.992 (very strong). Interpretation: Revenue changes are overwhelmingly driven by units sold, which is consistent with largely stable pricing.",
+    "trends_takeaway": "Revenue mean increased from Jan to Dec by 11.1%. Units mean increased from Jan to Dec by 11.2%. Average RPU changed from Jan to Dec by -0.05% (essentially flat). Takeaway: The dataset looks clean and stable. The main 'unusual' signal is a small set of low-RPU rows in Aug-Oct.",
+    "recommendations": [
+      "Validate the three low-RPU rows (Aug/Sep/Oct): confirm if discounts, promos, or different SKU mix explains lower unit revenue.",
+      "Add an explicit Date column (YYYY-MM-DD) if available; 'Month' alone limits true time-series anomaly detection.",
+      "Track 'Price' or 'Discount' fields to explain RPU shifts and reduce false positives in anomaly flags."
+    ]
+  },
+
+  "notable_observations": {
+    "dataset_structure_difference": "This dataset has only 3 columns (Month, Revenue, Units_Sold) — no Region or Product. All other traces had 5 columns. Agent adapted correctly and did not attempt to analyse Region or Product breakdowns that did not exist.",
+    "false_positive_test_result": "This is the negative control trace. User asked to find unusual things in data with no planted anomaly. Agent correctly found no major anomalies and characterised the data as clean. No false positives fabricated.",
+    "minor_rpu_finding": "Agent found 3 borderline RPU outliers (Aug/Sep/Oct, z=-2.36 to -2.48) via IQR method. These are below z=3 threshold and correctly treated as minor and uncertain — not as definitive anomalies. Appropriate calibration.",
+    "prompt_type_different": "This is the first trace with an open-ended anomaly-hunting prompt ('find anything unusual') rather than 'create a report.' Agent correctly interpreted this as requiring anomaly investigation first, report second.",
+    "comparison_to_other_traces": "Traces 001-003 all found South/Product_B as a clear anomaly. trace_004 correctly finds nothing equivalent. This confirms the agent's anomaly detection is responding to actual data patterns, not fabricating findings to appear useful."
+  }
+}

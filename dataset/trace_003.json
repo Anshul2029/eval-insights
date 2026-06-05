@@ -1,0 +1,150 @@
+{
+  "trace_id": "trace_003",
+  "run_date": "2026-04-25",
+  "dataset_file": "03_extreme_anomaly.xlsx",
+  "user_prompt": "does extreme size make a difference? Analyze and create a Word report",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted anomaly: South/Product_B March Revenue 7,531 (80% drop from Feb 37,655). Organic: South/Product_E Aug Revenue 20,000."
+  },
+  "agent_plan": "Setting up to analyze sales data, focusing on identifying anomalies and their impact. Will compute totals and averages with and without outliers.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 25 seconds \u2014 silent failure on first load, ran diagnostics (cwd, glob, hello-world), explicit openpyxl import on third attempt",
+      "tools_called": [
+        "pandas.read_excel (3 attempts)",
+        "os.getcwd",
+        "glob.glob",
+        "openpyxl explicit import"
+      ],
+      "output": "216 rows \u00d7 5 columns loaded on third attempt. Month ordering applied.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]",
+        "load_attempts: 3",
+        "self_diagnosed_environment: true"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 35 seconds \u2014 most complex computation, multiple sequential blocks",
+      "tools_called": [
+        "pandas groupby",
+        "MAD-based modified z-score",
+        "within-group z-score per Region\u00d7Product",
+        "three-scenario sensitivity",
+        "South MoM analysis",
+        "product ranking with/without anomalies"
+      ],
+      "output": "Total revenue 8,315,392. Extreme anomaly: South/Product_B Mar Revenue 7,531 (group_z=-14.80, typical median 42,468). South/Product_E Aug Revenue 20,000 (group_z=-4.11). Three scenarios: As-Reported 8,315,392, Drop-Anomalies 8,287,861 (-0.33%), Impute-to-Median 8,365,455 (+0.60%). South Jul\u2192Aug MoM flips: +0.09% as-reported vs -9.48% if dropped vs +7.33% if imputed.",
+      "key_facts_produced": [
+        "total_revenue: 8,315,392",
+        "anomaly_1: Mar | South | Product_B | Revenue 7,531 | group_z=-14.80 | typical_median=42,468",
+        "anomaly_2: Aug | South | Product_E | Revenue 20,000 | group_z=-4.11 | typical_median=35,126",
+        "scenario_as_reported: 8,315,392",
+        "scenario_drop: 8,287,861 (-0.33%)",
+        "scenario_impute: 8,365,455 (+0.60%)",
+        "south_aug_mom_as_reported: +0.09%",
+        "south_aug_mom_drop: -9.48%",
+        "south_aug_mom_imputed: +7.33%",
+        "impact_oct_normalization: +14,910 (+2.1%)",
+        "impact_nov_normalization: +19,116 (+2.6%)"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 8 seconds",
+      "tools_called": [
+        "matplotlib.savefig \u2014 3 charts",
+        "python-docx Document"
+      ],
+      "output": "3 sensitivity charts generated. All computed facts including 3-scenario tables and South MoM sensitivity passed into Word context.",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "sensitivity_tables_passed: true",
+        "south_mom_sensitivity_passed: true",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 6 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_paragraph, add_table, add_picture"
+      ],
+      "output": "6-section Word document. Section directly answers user question: 'Do extreme values make a difference?' Three sensitivity tables embedded. Dual-line charts showing as-reported vs imputed.",
+      "key_facts_produced": [
+        "sections: 6 plus appendix",
+        "anomaly_section_title: Do extreme values make a difference?",
+        "sensitivity_table: present",
+        "south_mom_table: present",
+        "dual_line_charts: present"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Narrative directly answers question: 'Yes \u2014 not much on full-year totals, but a lot on regional/monthly narratives.' Names both anomalies with reported vs typical comparisons. South Jul\u2192Aug MoM flip quantified.",
+      "key_facts_produced": [
+        "exec_summary: Total revenue 8,315,392. Two South anomalies distort MoM story. South Jul\u2192Aug MoM: +0.09% as-reported, -9.48% if treated as error, +7.33% if normalised.",
+        "anomaly_answer: Yes \u2014 not much on full-year totals, but a lot on regional/monthly narratives.",
+        "anomaly_1_narrative: South/Product_B Mar Revenue 7,531 vs typical 42,468.",
+        "anomaly_2_narrative: South/Product_E Aug Revenue 20,000 vs typical 35,126.",
+        "recommendation_1: Validate South records with source system.",
+        "recommendation_2: Add automated anomaly monitoring.",
+        "recommendation_3: Use robust KPIs (median, trimmed mean).",
+        "recommendation_4: Operational follow-up for real events or ETL fix."
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue: 8,315,392",
+      "anomaly_South_ProductB_Mar: Revenue 7,531 | group_z=-14.80 | typical_median=42,468",
+      "anomaly_South_ProductE_Aug: Revenue 20,000 | group_z=-4.11",
+      "south_aug_mom_flip: +0.09% \u2192 -9.48% \u2192 +7.33%",
+      "three_scenario_totals: [8,315,392 | 8,287,861 | 8,365,455]"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT",
+      "anomaly_South_ProductB_Mar: PRESENT",
+      "anomaly_South_ProductE_Aug: PRESENT",
+      "south_aug_mom_flip: PRESENT",
+      "sensitivity_table: PRESENT"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Total revenue 8,315,392. Two South anomalies distort MoM story. South Jul\u2192Aug MoM: +0.09% as-reported, -9.48% if treated as error, +7.33% if normalised.",
+    "anomaly_section": "Yes \u2014 not much on full-year totals, but a lot on regional/monthly narratives. South/Product_B Mar Revenue 7,531 vs typical 42,468. South/Product_E Aug Revenue 20,000 vs typical 35,126.",
+    "recommendations": [
+      "Validate South records with source system.",
+      "Add automated anomaly monitoring at Region\u00d7Product level.",
+      "Use robust KPIs for leadership reporting.",
+      "Operational follow-up or ETL fix if data errors confirmed."
+    ]
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "trace_id": "trace_groq_103",
+  "run_date": "2026-05-31",
+  "dataset_file": "03_extreme_anomaly.xlsx",
+  "user_prompt": "Review this sales data for issues and create a leadership report",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted: South/Product_B March: Revenue 7,531 — 80% drop from baseline ~37,655. Extreme outlier detectable by any method.. Organic: South/Product_E August: Revenue 20,000",
+    "ground_truth_anomalies": {
+      "planted": "South/Product_B March: Revenue 7,531 — 80% drop from baseline ~37,655. Extreme outlier detectable by any method.",
+      "organic": "South/Product_E August: Revenue 20,000"
+    }
+  },
+  "agent_plan": "Load 03_extreme_anomaly.xlsx, compute KPIs and z-score anomaly detection per Region x Product, create charts, write detailed Word report.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 3 seconds",
+      "tools_called": [
+        "pandas.read_excel",
+        "pd.Categorical"
+      ],
+      "output": "216 rows x 5 columns loaded. All expected columns present.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]",
+        "month_ordering_applied: true",
+        "null_values: none"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 9 seconds",
+      "tools_called": [
+        "pandas groupby",
+        "numpy z-score",
+        "pct_change"
+      ],
+      "output": "Total revenue 8,315,392. Z-score analysis at Region x Product granularity. 4 outliers detected.",
+      "key_facts_produced": [
+        "total_revenue: 8,315,392",
+        "total_units: 33,120",
+        "best_month: Nov (749,317)",
+        "worst_month: Mar (624,272)",
+        "h2_vs_h1: +7.7%",
+        "regional_leader: North (35.5%)",
+        "product_leader: Product_A (20.1%)",
+        "anomaly_detection_method: z-score per Region×Product, threshold |z|>=2",
+        "anomalies_detected: [North/Product_B Nov z=2.26, North/Product_C Dec z=2.26, South/Product_B Mar z=-3.06, South/Product_E Aug z=-2.81]",
+        "planted_anomaly_caught: true"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel→Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 6 seconds",
+      "tools_called": [
+        "matplotlib.savefig",
+        "python-docx Document"
+      ],
+      "output": "4 chart PNGs saved. All aggregates and anomaly list passed into Word script.",
+      "key_facts_produced": [
+        "charts_generated: 4",
+        "all_kpis_passed: true",
+        "anomaly_list_passed: [North/Product_B Nov, North/Product_C Dec, South/Product_B Mar, South/Product_E Aug]"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_table, add_picture"
+      ],
+      "output": "8-section Word document created with anomaly section.",
+      "key_facts_produced": [
+        "sections: 8 plus appendix",
+        "anomaly_section: present",
+        "charts_embedded: 4"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Executive summary with specific anomaly mentions. 5 recommendations written.",
+      "key_facts_produced": [
+        "exec_summary: Full-year revenue 8,315,392 across 33,120 units. H2 up 7.7% vs H1.",
+        "planted_anomaly_in_narrative: true",
+        "recommendation_1: Investigate North/Product_B Nov anomaly."
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue: 8,315,392",
+      "total_units: 33,120",
+      "best_month: Nov (749,317)",
+      "worst_month: Mar (624,272)",
+      "h2_vs_h1: +7.7%",
+      "regional_leader: North (35.5%)",
+      "product_leader: Product_A (20.1%)",
+      "anomalies_detected: [North/Product_B Nov z=2.26, North/Product_C Dec z=2.26, South/Product_B Mar z=-3.06, South/Product_E Aug z=-2.81]",
+      "planted_anomaly_caught: true"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT",
+      "total_units: PRESENT",
+      "best_month: PRESENT",
+      "worst_month: PRESENT",
+      "h2_vs_h1: PRESENT",
+      "regional_leader: PRESENT",
+      "product_leader: PRESENT",
+      "anomalies_detected: PRESENT",
+      "planted_anomaly_caught: PRESENT"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel→Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Full-year revenue 8,315,392 across 33,120 units. H2 up 7.7% vs H1. Best month: November (749,317). Worst month: March (624,272). 4 anomalies detected requiring investigation.",
+    "anomaly_section": "4 statistical outliers detected at |z|>=2 threshold. Anomaly details: North/Product_B in November: revenue 51,790 (z-score 2.26); North/Product_C in December: revenue 45,366 (z-score 2.26); South/Product_B in March: revenue 7,531 (z-score -3.06); South/Product_E in August: revenue 20,000 (z-score -2.81).",
+    "recommendations": [
+      "Investigate North/Product_B November anomaly — revenue dropped to 51,790 (z=2.26).",
+      "Monitor seasonal trends.",
+      "Automate monthly z-score checks."
+    ]
+  }
+}

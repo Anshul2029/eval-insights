@@ -1,0 +1,144 @@
+{
+  "trace_id": "trace_006",
+  "run_date": "2026-04-25",
+  "dataset_file": "06_missing_values.xlsx",
+  "user_prompt": "Analyse this data write a word report",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted: South/Product_B March Revenue 22,216 (41% drop). Organic: South/Product_E Aug Revenue 20,000. Data quality: 8 missing Revenue, 5 missing Units_Sold. 1 row unresolvable: Nov/South/Product_D both fields missing."
+  },
+  "agent_plan": "Prepare to analyze Excel data, focusing on revenue and units, addressing missing values and outliers.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 6 seconds",
+      "tools_called": [
+        "pandas.read_excel",
+        "df.isna().sum()",
+        "df[Revenue < 1000] filter",
+        "missing rows filter with sort"
+      ],
+      "output": "216 rows \u00d7 5 columns. Revenue: 8 missing. Units_Sold: 5 missing. 12 rows with at least one missing field. 1 row with both missing: Nov/South/Product_D.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "missing_revenue: 8",
+        "missing_units: 5",
+        "rows_with_any_missing: 12",
+        "unresolvable_row: Nov/South/Product_D (both fields missing)"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 18 seconds",
+      "tools_called": [
+        "median unit price per Region\u00d7Product",
+        "fallback imputation (Region+Product \u2192 Product \u2192 overall)",
+        "groupby aggregates",
+        "MAD-based robust z-score per Product"
+      ],
+      "output": "7 Revenue rows imputed, 4 Units rows imputed, 1 row unresolvable. Post-imputation total revenue 8,297,952. North leads (35.6%). Product_A leads (20.2%). 2 pricing anomalies: South/Product_E Aug (Unit_Price 194.17, robust_z=-111.86), South/Product_B Mar (Unit_Price 233.85, robust_z=-37.86).",
+      "key_facts_produced": [
+        "imputed_revenue_rows: 7",
+        "imputed_units_rows: 4",
+        "unresolvable_rows: 1 (Nov/South/Product_D)",
+        "total_revenue_post_imputation: 8,297,952",
+        "regional_leader: North (35.6%)",
+        "product_leader: Product_A (20.2%)",
+        "anomaly_1: Aug | South | Product_E | Unit_Price 194.17 | robust_z=-111.86",
+        "anomaly_2: Mar | South | Product_B | Unit_Price 233.85 | robust_z=-37.86"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 7 seconds",
+      "tools_called": [
+        "matplotlib.savefig \u2014 3 charts",
+        "python-docx Document"
+      ],
+      "output": "3 charts generated. All computed facts, imputation results, anomaly findings, and missing value table passed into Word context.",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "missing_rows_table_passed: 12 rows",
+        "imputation_stats_passed: 7 revenue, 4 units, 1 unresolvable",
+        "anomaly_findings_passed: 2",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 6 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_table, add_picture"
+      ],
+      "output": "8-section report plus appendix. Dedicated data quality section with missing rows table. Imputation methodology in appendix.",
+      "key_facts_produced": [
+        "sections: 8 plus appendix",
+        "data_quality_section: present",
+        "missing_rows_table: present (12 rows)",
+        "imputation_appendix: present"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Narrative explicitly addresses data quality as primary section. Both anomalies named. Unresolvable row named specifically. Imputation methodology referenced.",
+      "key_facts_produced": [
+        "exec_summary: Total revenue (imputed) 8,297,952. 8 missing Revenue, 5 missing Units imputed. 1 row unresolved: Nov/South/Product_D.",
+        "data_quality_narrative: Revenue imputed for 7 rows, Units for 4 rows using median unit price. 1 row unresolvable.",
+        "anomaly_1: Aug/South/Product_E Revenue 20,000, Unit_Price 194.17.",
+        "anomaly_2: Mar/South/Product_B Revenue 22,216, Unit_Price 233.85.",
+        "recommendation_3: Fix upstream processes \u2014 Revenue and Units cannot both be blank.",
+        "recommendation_4: Track unit price variance."
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue_post_imputation: 8,297,952",
+      "missing_summary: 8 Revenue, 5 Units, 7 imputed, 4 imputed, 1 unresolvable",
+      "unresolvable: Nov/South/Product_D",
+      "anomaly_South_ProductB_Mar: Unit_Price 233.85 | robust_z=-37.86",
+      "anomaly_South_ProductE_Aug: Unit_Price 194.17 | robust_z=-111.86"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT",
+      "missing_summary: PRESENT (data quality section)",
+      "unresolvable_row: PRESENT (named specifically)",
+      "anomaly_South_ProductB: PRESENT",
+      "anomaly_South_ProductE: PRESENT"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Total revenue (imputed) 8,297,952 across 33,065 units. 8 missing Revenue, 5 missing Units imputed using median unit price. 1 row unresolved: Nov/South/Product_D.",
+    "anomaly_section": "South/Product_E Aug: Revenue 20,000, Unit_Price 194.17. South/Product_B Mar: Revenue 22,216, Unit_Price 233.85.",
+    "recommendations": [
+      "Fix upstream processes to prevent missing Revenue/Units fields.",
+      "Investigate South/Product_D underperformance.",
+      "Validate low-price anomaly rows.",
+      "Scale North and Product_A playbooks."
+    ]
+  }
+}

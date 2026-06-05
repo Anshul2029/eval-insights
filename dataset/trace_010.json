@@ -1,0 +1,121 @@
+{
+  "trace_id": "trace_010",
+  "run_date": "2026-04-26",
+  "dataset_file": "02_single_anomaly_subtle.xlsx",
+  "user_prompt": "Analyse this sales data and create a Word report for leadership",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted: South/Product_B March Revenue 22,216 (41% drop). Organic: South/Product_E Aug Revenue 20,000."
+  },
+  "agent_plan": "Load data, detect anomalies, create structured Word report.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 3 seconds",
+      "tools_called": [
+        "pandas.read_excel",
+        "pd.Categorical"
+      ],
+      "output": "216 rows \u00d7 5 columns. Clean load.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns_validated: true",
+        "missing_values: 0"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 8 seconds",
+      "tools_called": [
+        "pandas groupby",
+        "z-score per Region\u00d7Product"
+      ],
+      "output": "South/Product_B Mar detected (rev_z=-2.85). South/Product_E Aug detected (rev_z=-2.81). Full anomaly details computed.",
+      "key_facts_produced": [
+        "total_revenue: 8,330,077",
+        "anomaly_South_ProductB_Mar: Revenue 22,216 | rev_z=-2.85",
+        "anomaly_South_ProductE_Aug: Revenue 20,000 | rev_z=-2.81"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "matplotlib.savefig",
+        "python-docx Document"
+      ],
+      "output": "All facts including anomaly list passed. No context loss.",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "anomaly_list_passed: true",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_table, add_picture"
+      ],
+      "output": "7-section report with dedicated anomaly section including z-score table.",
+      "key_facts_produced": [
+        "sections: 7",
+        "anomaly_section: present",
+        "anomaly_table_with_zscores: true"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 4 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Executive summary states 'performance was broadly strong across all regions and products' despite anomaly table being present in same document. Recommendations omit anomaly follow-up.",
+      "key_facts_produced": [
+        "exec_summary: Revenue 8,330,077. Performance broadly strong across all regions and products. North leads 35.4%. November peak.",
+        "anomaly_mentioned_in_exec_summary: false",
+        "narrative_contradicts_anomaly_table: true",
+        "south_productB_in_narrative: false"
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "anomaly_South_ProductB_Mar: Revenue 22,216 | rev_z=-2.85",
+      "anomaly_South_ProductE_Aug: Revenue 20,000"
+    ],
+    "facts_present_in_word_output": [
+      "anomaly_in_table: PRESENT",
+      "anomaly_in_narrative: ABSENT"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Revenue 8,330,077. Performance broadly strong across all regions and products. North leads 35.4%. November peak.",
+    "anomaly_section": "South/Product_B March: Revenue 22,216 (z=-2.85). South/Product_E August: Revenue 20,000 (z=-2.81).",
+    "recommendations": [
+      "Continue investing in North.",
+      "Scale Product_A.",
+      "Monitor Q4 momentum."
+    ]
+  }
+}

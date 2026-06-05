@@ -1,0 +1,124 @@
+{
+  "trace_id": "trace_014",
+  "run_date": "2026-04-26",
+  "dataset_file": "02_single_anomaly_subtle.xlsx",
+  "user_prompt": "Analyse this sales data and create a Word report for leadership",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted: South/Product_B March Revenue 22,216 (41% drop). Organic: South/Product_E Aug Revenue 20,000."
+  },
+  "agent_plan": "Load file, get summary statistics, write Word report quickly.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 3 seconds",
+      "tools_called": [
+        "pandas.read_excel",
+        "df.head()",
+        "df.shape"
+      ],
+      "output": "216 rows \u00d7 5 columns. Basic check only. No month ordering or quality validation.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 3 seconds \u2014 unusually fast",
+      "tools_called": [
+        "df.Revenue.sum()",
+        "df.Units_Sold.sum()",
+        "df.Revenue.mean()"
+      ],
+      "output": "Total revenue 8,330,077, units 33,157, avg per row 38,565. No regional, product, monthly, or anomaly analysis performed.",
+      "key_facts_produced": [
+        "total_revenue: 8,330,077",
+        "total_units: 33,157",
+        "avg_per_row: 38,565",
+        "regional_breakdown: NOT COMPUTED",
+        "product_breakdown: NOT COMPUTED",
+        "anomaly_detection: NOT PERFORMED"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 4 seconds",
+      "tools_called": [
+        "python-docx Document"
+      ],
+      "output": "Only 3 aggregate stats passed. No charts. No breakdowns.",
+      "key_facts_produced": [
+        "charts_generated: 0",
+        "context_richness: very low"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 3 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_paragraph"
+      ],
+      "output": "3-section minimal report. No charts, no breakdowns, no anomaly section.",
+      "key_facts_produced": [
+        "sections: 3",
+        "charts: none",
+        "anomaly_section: NOT PRESENT"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 2 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "2-paragraph summary with only total revenue and average per row. Generic recommendations with no data backing.",
+      "key_facts_produced": [
+        "exec_summary: Revenue 8,330,077 across 33,157 units. Average 38,565 per record. Covers 12 months across multiple regions and products.",
+        "anomaly_mentioned: false",
+        "south_productB_mentioned: false",
+        "recommendation_1: Review regional performance in detail.",
+        "recommendation_2: Analyse product mix."
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue: 8,330,077",
+      "total_units: 33,157"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT",
+      "regional_breakdown: ABSENT \u2014 never computed",
+      "anomaly: ABSENT \u2014 never computed"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Revenue 8,330,077 across 33,157 units. Average 38,565 per record. Covers 12 months.",
+    "anomaly_section": "NOT PRESENT",
+    "recommendations": [
+      "Review regional performance.",
+      "Analyse product mix."
+    ]
+  }
+}

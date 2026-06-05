@@ -1,0 +1,219 @@
+{
+  "trace_id": "trace_006",
+  "run_date": "2026-04-25",
+  "dataset_file": "06_missing_values.xlsx",
+  "dataset_variant": "missing_values",
+  "user_prompt": "Analyse this data write a word report",
+
+  "source_data_summary": {
+    "rows": 216,
+    "columns": ["Month", "Region", "Product", "Revenue", "Units_Sold"],
+    "months": 12,
+    "regions": ["North", "South", "West"],
+    "products": ["Product_A", "Product_B", "Product_C", "Product_D", "Product_E", "Product_F"],
+    "ground_truth_anomalies": {
+      "planted_revenue_anomaly": "South/Product_B March: Revenue 22,216 (same 41% drop as trace_002, planted anomaly)",
+      "organic": "South/Product_E August: Revenue 20,000 (same organic outlier present in all variants)",
+      "data_quality_issues": {
+        "missing_revenue_count": 8,
+        "missing_units_count": 5,
+        "missing_rows": [
+          "Apr | North | Product_D — Revenue missing, Units 133",
+          "Apr | South | Product_C — Revenue missing, Units 119",
+          "Apr | West | Product_E — Revenue missing, Units 142",
+          "Aug | West | Product_B — Revenue 43810, Units missing",
+          "Feb | South | Product_C — Revenue 33227, Units missing",
+          "Feb | South | Product_E — Revenue missing, Units 147",
+          "Feb | West | Product_F — Revenue missing, Units 152",
+          "Jan | South | Product_A — Revenue missing, Units 165",
+          "Nov | South | Product_C — Revenue 30877, Units missing",
+          "Nov | South | Product_D — Revenue missing, Units missing (unresolvable)",
+          "Oct | North | Product_B — Revenue missing, Units 178",
+          "Oct | South | Product_F — Revenue 32063, Units missing"
+        ],
+        "unresolvable_row": "Nov | South | Product_D — both Revenue and Units_Sold missing"
+      }
+    }
+  },
+
+  "agent_plan": "Preparing to analyze Excel data for a report, focusing on revenue and units sold, while addressing missing values and outliers. Will use Python for this task.",
+
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 6 seconds — 4 sequential code blocks for parsing and missing value detection",
+      "what_agent_did": "Loaded 06_missing_values.xlsx via pandas.read_excel. Printed df.head() and df.shape. Ran df.isna().sum() to count missing values per column — found 8 missing Revenue and 5 missing Units_Sold. Checked for low revenue values below 1000 (none found). Printed all rows with any missing value sorted by Month, Region, Product — found 12 rows with at least one missing field including 1 row (Nov/South/Product_D) with both Revenue and Units missing.",
+      "tools_called": [
+        "pandas.read_excel",
+        "df.isna().sum()",
+        "df[Revenue < 1000] filter",
+        "df[Revenue.isna | Units_Sold.isna] filter with sort"
+      ],
+      "output": "216 rows × 5 columns loaded. Revenue: 8 missing. Units_Sold: 5 missing. 0 low-revenue anomalies. 12 rows with at least one missing field identified. 1 row with both fields missing: Nov/South/Product_D.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]",
+        "missing_revenue: 8",
+        "missing_units_sold: 5",
+        "low_revenue_rows: 0",
+        "rows_with_any_missing: 12",
+        "unresolvable_row: Nov | South | Product_D (both fields missing)",
+        "missing_rows_identified: [Apr/North/Product_D, Apr/South/Product_C, Apr/West/Product_E, Aug/West/Product_B, Feb/South/Product_C, Feb/South/Product_E, Feb/West/Product_F, Jan/South/Product_A, Nov/South/Product_C, Nov/South/Product_D, Oct/North/Product_B, Oct/South/Product_F]"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 18 seconds — multiple computation blocks including imputation, KPIs, aggregations, anomaly detection",
+      "what_agent_did": "Ran 6 sequential computation blocks: (1) Imputation — computed median unit price per Region×Product from complete rows, with fallback to Product-only then overall median. Imputed Revenue for 7 rows where Units present. Imputed Units for 4 rows where Revenue present. 1 row (Nov/South/Product_D) remains unresolvable. (2) KPIs — total revenue 8,297,952, total units 33,065, avg price 250.96. Best month Dec 735,013, worst month Mar 638,957. (3) Regional aggregates — North 2,951,604 (35.6%), West 2,828,375 (34.1%), South 2,517,973 (30.3%). (4) Product aggregates — Product_A leads 1,674,389 (20.2%), Product_D lowest 1,111,533 (13.4%). (5) Region×Product combinations — top: North/Product_A 579,753; bottom: South/Product_D 321,580. (6) Pricing anomaly detection — robust z-score (MAD-based) per Product at threshold 3.5 — found 2 anomalies: Aug/South/Product_E (Unit_Price 194.17, robust_z=-111.86) and Mar/South/Product_B (Unit_Price 233.85, robust_z=-37.86).",
+      "tools_called": [
+        "groupby median unit price per Region×Product",
+        "fallback imputation logic (Region+Product → Product → overall)",
+        "pd.to_numeric imputation application",
+        "groupby sum for monthly, regional, product aggregates",
+        "pct_change for trend",
+        "MAD-based robust z-score per Product",
+        "groupby Region×Product for combination ranking"
+      ],
+      "output": "Post-imputation totals: revenue 8,297,952, units 33,065. North leads regions. Product_A leads products. 2 pricing anomalies detected: South/Product_E Aug (Unit_Price 194.17) and South/Product_B Mar (Unit_Price 233.85). 1 row permanently unresolvable.",
+      "key_facts_produced": [
+        "imputed_revenue_rows: 7",
+        "imputed_units_rows: 4",
+        "unresolvable_rows_remaining: 1 (Nov/South/Product_D)",
+        "total_revenue_post_imputation: 8,297,952",
+        "total_units_post_imputation: 33,065",
+        "avg_price: 250.96",
+        "best_month: Dec (735,013)",
+        "worst_month: Mar (638,957)",
+        "regional_1: North 2,951,604 (35.6%)",
+        "regional_2: West 2,828,375 (34.1%)",
+        "regional_3: South 2,517,973 (30.3%)",
+        "product_leader: Product_A 1,674,389 (20.2%)",
+        "product_lowest: Product_D 1,111,533 (13.4%)",
+        "top_combo: North/Product_A 579,753",
+        "bottom_combo: South/Product_D 321,580",
+        "anomaly_1: Aug | South | Product_E | Revenue 20,000 | Units 103 | Unit_Price 194.17 | robust_z=-111.86",
+        "anomaly_2: Mar | South | Product_B | Revenue 22,216 | Units 95 | Unit_Price 233.85 | robust_z=-37.86",
+        "planted_anomaly_caught: TRUE — South/Product_B Mar detected via pricing z-score",
+        "organic_anomaly_caught: TRUE — South/Product_E Aug detected"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel→Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 7 seconds",
+      "what_agent_did": "Generated 3 chart PNG files: monthly_revenue_trend.png, revenue_by_region.png, revenue_by_product.png. Passed all computed dataframes (monthly, region, product, rp_top, rp_bottom, anoms_df, missing_rows) plus KPI variables into Word document builder.",
+      "tools_called": [
+        "matplotlib.pyplot.savefig — 3 charts",
+        "python-docx Document",
+        "all dataframes and KPI variables passed"
+      ],
+      "output": "3 charts generated. All computed facts, imputation results, anomaly findings, and missing value table passed into Word context.",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "chart_1: monthly_revenue_trend.png",
+        "chart_2: revenue_by_region.png",
+        "chart_3: revenue_by_product.png",
+        "missing_rows_table_passed: 12 rows",
+        "imputation_stats_passed: 7 revenue, 4 units, 1 unresolvable",
+        "anomaly_findings_passed: 2 pricing anomalies",
+        "all_regional_product_data_passed: true",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 6 seconds",
+      "what_agent_did": "Created Word document with 8 sections plus appendix: Executive Summary, Data Quality and Missing Values (with missing rows table), Performance Overview (monthly chart), Regional Performance (with chart), Product Performance (with chart), Best/Worst Region-Product Combinations (2 tables), Unusual Patterns/Potential Issues (anomaly list), Recommendations (4 bullets), Appendix: Notes on Imputation Method. Missing rows table embedded with 5 columns showing which fields were blank.",
+      "tools_called": [
+        "python-docx Document, add_heading, add_paragraph, add_table, add_picture"
+      ],
+      "output": "Sales_Performance_Report_06_missing_values.docx created. 8 sections plus appendix. Dedicated data quality section with missing rows table. Imputation methodology documented in appendix. Anomaly section lists 2 pricing outliers.",
+      "key_facts_produced": [
+        "sections_count: 8 plus appendix",
+        "data_quality_section_present: true",
+        "missing_rows_table_embedded: true — 12 rows, 5 columns",
+        "imputation_stats_in_report: 7 Revenue imputed, 4 Units imputed, 1 unresolvable",
+        "anomaly_section_present: true",
+        "imputation_appendix_present: true",
+        "structure_order: exec_summary → data_quality → performance → regional → product → combinations → anomalies → recommendations → appendix"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 5 seconds",
+      "what_agent_did": "Wrote executive summary with 7 KPI bullet points referencing imputed totals. Wrote data quality section explicitly stating 8 missing Revenue, 5 missing Units_Sold, 7 Revenue imputed, 4 Units imputed, 1 unresolvable (Nov/South/Product_D). Wrote regional and product performance with specific revenue, share, and avg price per entity. Wrote anomaly section listing both pricing outliers with specific values. Wrote 4 recommendations covering operational, commercial, data quality, and analytics.",
+      "tools_called": ["python-docx paragraph and run formatting"],
+      "output": "Narrative explicitly addresses data quality issues as a primary section — not buried or minimised. Both pricing anomalies named. Unresolvable row named specifically. Imputation methodology referenced.",
+      "key_facts_produced": [
+        "exec_summary_text: Total revenue (imputed where needed): 8,297,952. Total units sold (imputed where needed): 33,065. Overall average unit price: 250.96. Best revenue month: Dec (735,013). Lowest revenue month: Mar (638,957). Largest region by revenue: North (35.6% share). Top product by revenue: Product_A (20.2% share).",
+        "data_quality_narrative: The raw data contains 8 missing Revenue values and 5 missing Units_Sold values across 216 rows. Revenue was imputed for 7 rows and Units_Sold for 4 rows using median unit price for same Region+Product. 1 row remains unresolved: Nov, South, Product_D.",
+        "anomaly_1_narrative: Aug | South | Product_E: Revenue 20,000, Units 103, Unit price 194.17",
+        "anomaly_2_narrative: Mar | South | Product_B: Revenue 22,216, Units 95, Unit price 233.85",
+        "planted_anomaly_in_narrative: TRUE — South/Product_B Mar named with specific values",
+        "organic_anomaly_in_narrative: TRUE — South/Product_E Aug named",
+        "recommendation_1: Operational — Scale Product_A and Product_B playbooks in North and West",
+        "recommendation_2: Commercial — Investigate South/Product_D underperformance",
+        "recommendation_3: Data — Fix upstream processes to avoid missing Revenue/Units fields, implement validation rules",
+        "recommendation_4: Analytics — Track unit price variance, investigate flagged low-price rows",
+        "data_quality_treated_as_primary_section: TRUE — not an afterthought"
+      ]
+    }
+  ],
+
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue_post_imputation: 8,297,952",
+      "missing_value_summary: 8 Revenue missing, 5 Units missing, 7 Revenue imputed, 4 Units imputed, 1 unresolvable",
+      "unresolvable_row: Nov/South/Product_D",
+      "anomaly_southProductB_mar: Revenue 22,216 | Unit_Price 233.85 | robust_z=-37.86",
+      "anomaly_southProductE_aug: Revenue 20,000 | Unit_Price 194.17 | robust_z=-111.86",
+      "regional_leader: North (35.6%)",
+      "product_leader: Product_A (20.2%)",
+      "bottom_combo: South/Product_D 321,580"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT (exec summary — 8,297,952)",
+      "missing_value_summary: PRESENT (data quality section with full table)",
+      "unresolvable_row: PRESENT (specifically named — Nov, South, Product_D)",
+      "imputation_stats: PRESENT (7 Revenue imputed, 4 Units imputed)",
+      "anomaly_southProductB_mar: PRESENT (anomaly section with Revenue 22,216, Units 95, Unit price 233.85)",
+      "anomaly_southProductE_aug: PRESENT (anomaly section with Revenue 20,000, Units 103, Unit price 194.17)",
+      "regional_leader_North: PRESENT (regional section)",
+      "product_leader_ProductA: PRESENT (product section)",
+      "bottom_combo_SouthProductD: PRESENT (combinations section)"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel→Word (Step 3)",
+    "context_loss_detected": false
+  },
+
+  "word_output_actual_text": {
+    "executive_summary": "Total revenue (imputed where needed): 8,297,952. Total units sold (imputed where needed): 33,065. Overall average unit price: 250.96. Best revenue month: Dec (735,013). Lowest revenue month: Mar (638,957). Largest region by revenue: North (35.6% share). Top product by revenue: Product_A (20.2% share).",
+    "data_quality_section": "The raw data contains 8 missing Revenue values and 5 missing Units_Sold values across 216 rows. For reporting convenience, Revenue was imputed for 7 rows (where Units were present) and Units_Sold was imputed for 4 rows (where Revenue was present) using the median unit price for the same Region+Product (fallbacks: Product-only, then overall). 1 row remains unresolved (both Revenue and Units_Sold missing): Month=Nov, Region=South, Product=Product_D.",
+    "anomaly_section": "The following rows have unusually low unit price relative to the typical level for the same product (robust outlier detection). These may indicate discounting, data entry issues, or special deals: Aug | South | Product_E: Revenue 20,000, Units 103, Unit price 194.17. Mar | South | Product_B: Revenue 22,216, Units 95, Unit price 233.85.",
+    "recommendations": [
+      "Operational: Focus on scaling Product_A and Product_B playbooks in North and West where they contribute the largest revenue.",
+      "Commercial: Investigate South region underperformance for Product_D (lowest region-product revenue) to identify demand, pricing, or distribution gaps.",
+      "Data: Fix upstream processes to avoid missing Revenue/Units fields; implement validation rules (Revenue and Units cannot both be blank; Units should be within expected range ~80-220 based on current data).",
+      "Analytics: Track unit price variance by product-month; investigate flagged low-price rows (e.g., Aug South Product_E) for discount or entry errors."
+    ]
+  },
+
+  "notable_observations": {
+    "data_quality_as_primary_concern": "This is the only trace where data quality handling is a primary section of the report, not an afterthought. The agent dedicated a full section with a table of missing rows and explicitly named the imputation method used.",
+    "imputation_strategy": "Agent chose median over mean for imputation — explicitly documented as a robustness choice against outliers. Used 3-level fallback: Region×Product median → Product median → overall median. 7 Revenue values and 4 Units values successfully imputed.",
+    "unresolvable_row": "Nov/South/Product_D had both Revenue and Units_Sold missing — no imputation possible. Agent correctly identified and named this row as unresolvable rather than silently dropping or fabricating a value.",
+    "planted_anomaly_caught_despite_missing_data": "South/Product_B March was detected via pricing robust z-score (-37.86) even though the dataset had missing values in other rows. The missing values did not prevent anomaly detection.",
+    "anomaly_detection_through_pricing_lens": "Unlike traces 001-003 which used revenue z-scores, this trace detected anomalies through Unit_Price analysis (robust z-score per Product). South/Product_B March showed Revenue 22,216 for 95 units = price 233.85, below normal range. The planted anomaly was found via a different signal path.",
+    "comparison_to_other_traces": "First trace where the agent had to handle data quality issues before analysis. The imputation logic added a preprocessing step between parsing and computation that does not exist in traces 001-005. Your rubric generator needs to recognise this additional step and generate criteria that check whether imputation was handled transparently."
+  }
+}

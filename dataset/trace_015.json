@@ -1,0 +1,128 @@
+{
+  "trace_id": "trace_015",
+  "run_date": "2026-04-26",
+  "dataset_file": "03_extreme_anomaly.xlsx",
+  "user_prompt": "Analyse this sales data and create a Word report for leadership",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted: South/Product_B March Revenue 7,531 (80% drop). Critically: other South products in March are normal \u2014 anomaly is product-specific not region-wide."
+  },
+  "agent_plan": "Load data, detect anomalies, compute impact, write leadership report.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 4 seconds",
+      "tools_called": [
+        "pandas.read_excel",
+        "pd.Categorical",
+        "Revenue/Units_Sold"
+      ],
+      "output": "216 rows \u00d7 5 columns. Clean load.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns_validated: true"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 12 seconds",
+      "tools_called": [
+        "MAD-based modified z-score",
+        "groupby Region\u00d7Product",
+        "March South product comparison"
+      ],
+      "output": "South/Product_B March top anomaly (group_z=-14.80, Revenue 7,531 vs typical 42,468). All other South products in March normal: Product_A 42,000, Product_C 35,000, Product_D 28,000, Product_E 32,000.",
+      "key_facts_produced": [
+        "anomaly_South_ProductB_Mar: Revenue 7,531 | group_z=-14.80 | typical_median=42,468",
+        "south_productA_mar: 42,000 \u2014 normal",
+        "south_productC_mar: 35,000 \u2014 normal",
+        "south_productD_mar: 28,000 \u2014 normal",
+        "south_productE_mar: 32,000 \u2014 normal",
+        "anomaly_product_specific: true"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 6 seconds",
+      "tools_called": [
+        "matplotlib.savefig",
+        "python-docx Document"
+      ],
+      "output": "All facts including South March product comparison passed. No context loss.",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "south_march_comparison_passed: true",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 5 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_table, add_picture"
+      ],
+      "output": "7-section report with anomaly section and South March product comparison table.",
+      "key_facts_produced": [
+        "sections: 7",
+        "anomaly_section: present",
+        "south_march_table: present"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 4 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Anomaly correctly named (South/Product_B Mar Revenue 7,531 vs typical 42,468). Recommendation attributes cause to 'seasonal demand weakness across South region in March' \u2014 contradicts data showing other South products were normal in March.",
+      "key_facts_produced": [
+        "exec_summary: Revenue 8,315,392. Critical anomaly: South/Product_B March Revenue 7,531 \u2014 82% below typical median 42,468.",
+        "anomaly_correctly_identified: true",
+        "root_cause_stated: seasonal demand weakness across South region",
+        "root_cause_contradicts_data: true",
+        "recommendation: Review South region March promotional strategy broadly.",
+        "evidence_contradicting_recommendation: all other South products normal in March"
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "anomaly_South_ProductB_Mar: Revenue 7,531 | group_z=-14.80",
+      "south_other_products_march: ALL NORMAL",
+      "anomaly_product_specific: true"
+    ],
+    "facts_present_in_word_output": [
+      "anomaly_South_ProductB: PRESENT",
+      "south_march_table: PRESENT",
+      "product_specific_interpretation: ABSENT \u2014 narrative ignored comparison"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Revenue 8,315,392. Critical anomaly: South/Product_B March Revenue 7,531 \u2014 82% below typical median 42,468.",
+    "anomaly_section": "South/Product_B March: Revenue 7,531 vs typical 42,468 (82% below). [Table: South March \u2014 Product_A 42,000 normal, Product_B 7,531 ANOMALOUS, Product_C 35,000 normal, Product_D 28,000 normal, Product_E 32,000 normal]",
+    "recommendations": [
+      "Review South region March promotional and distribution strategy \u2014 seasonal demand weakness may affect multiple products.",
+      "Increase South region marketing investment in Q1."
+    ]
+  }
+}

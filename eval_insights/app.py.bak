@@ -1,0 +1,2370 @@
+"""Eval Insights Platform -- Streamlit dashboard for evalVNext trajectory analysis."""
+from collections import Counter
+import hashlib
+import html
+import io
+import json
+import os
+from pathlib import Path
+import re as _re
+import sys
+import tempfile
+import zipfile
+
+from dotenv import load_dotenv
+load_dotenv()
+
+import pandas as pd
+import streamlit as st
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+from trajectory_parser import auto_discover_batches, ParsedEvalCase, describe_script
+from comparison import render_comparison_mode
+from evolution import render_evolution_mode
+import failure_classifier as fc
+from failure_classifier import (
+    classify_all,
+    classify_recovery_cases,
+    generate_insights,
+    generate_full_insights,
+    generate_narrative,
+    generate_executive_summary,
+    analyze_trajectory_efficiency,
+    extract_assertion_details,
+    _tag_value,
+    OUTCOME_CATEGORIES,
+    TRAJECTORY_CATEGORIES,
+)
+
+def extract_grader_evidence(case):
+    return fc.extract_grader_evidence(case)
+
+BASE = os.path.dirname(os.path.abspath(__file__))
+HISTORY_FILE = os.path.join(BASE, ".streamlit", "history.json")
+
+st.set_page_config(page_title="Eval Insights", layout="wide")
+
+
+def _h(text):
+    return html.escape(str(text))
+
+
+# ---------------------------------------------------------------------------
+# CSS — theme-aware
+# ---------------------------------------------------------------------------
+
+_SHARED_CSS = """
+section[data-testid="stSidebar"] .stButton button {
+    text-align: left !important; justify-content: flex-start !important;
+    border: none !important; border-radius: 8px !important;
+    padding: 0.55rem 1rem !important; font-size: 0.9rem !important;
+    box-shadow: none !important;
+}
+section[data-testid="stSidebar"] .stButton { margin-bottom: -0.5rem; }
+header[data-testid="stHeader"] { display: none !important; }
+#MainMenu, footer, .stDeployButton { display: none !important; }
+.metric-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin-bottom: 1.2rem; }
+.metric-card .label {
+    font-size: 0.72rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+}
+.metric-card .value { font-size: 1.9rem; font-weight: 700; margin-top: 0.3rem; }
+.ea-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.5rem; }
+.ea-col {
+    border-radius: 8px; padding: 0.7rem 0.9rem;
+    font-family: 'Consolas', 'Monaco', monospace; font-size: 0.8rem;
+    line-height: 1.5; word-break: break-word;
+}
+.ea-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
+.step-timeline { border-left: 3px solid; padding-left: 1rem; margin: 0.5rem 0; }
+.step-item { padding: 0.3rem 0; font-size: 0.82rem; position: relative; margin-bottom: 0.2rem; }
+.step-item::before {
+    content: ''; position: absolute; left: -1.35rem; top: 0.55rem;
+    width: 8px; height: 8px; border-radius: 50%;
+}
+.provider-badge {
+    display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    color: white; font-size: 0.78rem; font-weight: 600;
+    padding: 0.35rem 0.9rem; border-radius: 20px; margin-bottom: 1rem;
+}
+.col-label {
+    font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    padding: 0.4rem 0.7rem; border-radius: 6px; margin-bottom: 0.8rem; display: inline-block;
+}
+"""
+
+_LIGHT_THEME_CSS = """
+section[data-testid="stSidebar"] { background: #f8fafc !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] { background: #f8fafc !important; }
+.loaded-path {
+    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 0.5rem 0.8rem; font-size: 0.78rem; color: #64748b;
+    word-break: break-all; margin-bottom: 0.5rem;
+}
+.loaded-path strong { color: #1e293b; }
+.sidebar-title { color: #1e293b; font-size: 1.15rem; font-weight: 700; padding: 0.3rem 0 1rem 0; }
+section[data-testid="stSidebar"] .stButton button[kind="secondary"] {
+    background: transparent !important; color: #64748b !important; font-weight: 400 !important;
+}
+section[data-testid="stSidebar"] .stButton button[kind="secondary"]:hover {
+    background: #f1f5f9 !important; color: #1e293b !important;
+}
+section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+    background: #2563eb !important; color: white !important; font-weight: 600 !important;
+}
+.hero-banner {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%);
+    color: white; padding: 2.2rem 2.5rem; border-radius: 14px; margin-bottom: 1.5rem;
+    position: relative; overflow: hidden;
+}
+.hero-banner h1 { font-size: 1.8rem; font-weight: 800; margin: 0 0 0.3rem 0; color: white; }
+.hero-banner p { font-size: 0.92rem; color: #93c5fd; margin: 0; }
+.metric-card {
+    background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.2rem;
+}
+.metric-card .label { color: #64748b; }
+.metric-card.total .value { color: #1e293b; }
+.metric-card.pass .value { color: #059669; }
+.metric-card.fail .value { color: #dc2626; }
+.metric-card.rate .value {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.section-strip {
+    background: linear-gradient(90deg, #1e3a5f 0%, #1e40af 100%);
+    color: white; padding: 0.7rem 1.1rem; border-radius: 8px;
+    font-weight: 600; font-size: 0.92rem; margin: 1.2rem 0 1rem 0;
+}
+.insight-card { border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 0.7rem; font-size: 0.9rem; line-height: 1.65; }
+.insight-card.good {
+    background: #f0fdf4; border-left: 4px solid #059669; color: #065f46;
+}
+.insight-card.bad {
+    background: #fef2f2; border-left: 4px solid #dc2626; color: #991b1b;
+}
+.fix-card {
+    background: white; border: 1px solid #e2e8f0; border-left: 4px solid #d97706;
+    border-radius: 10px; padding: 1rem 1.3rem; margin-bottom: 0.7rem;
+    font-size: 0.9rem; line-height: 1.6; color: #1e293b;
+}
+.fix-rank { font-weight: 700; color: #d97706; }
+.fix-count {
+    color: #d97706; font-size: 0.78rem; font-weight: 500;
+    background: #fef3c7; padding: 0.1rem 0.5rem; border-radius: 10px; margin-left: 0.3rem;
+}
+.query-box {
+    background: #f0f9ff; border: 1px solid #2563eb; border-radius: 10px; padding: 1.1rem 1.3rem;
+    font-size: 0.92rem; color: #1e293b; margin-bottom: 1rem; line-height: 1.7;
+}
+.grader-section {
+    background: #fefce8; border: 1px solid #d97706; border-radius: 10px; padding: 1.1rem 1.3rem; margin-bottom: 1rem;
+}
+.grader-title {
+    font-weight: 700; font-size: 0.76rem; color: #92400e; margin-bottom: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
+.ea-expected { background: #f0fdf4; border: 1px solid #059669; color: #065f46; }
+.ea-actual { background: #fef2f2; border: 1px solid #dc2626; color: #991b1b; }
+.ea-label { color: #64748b; }
+.why-section {
+    background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 1.1rem 1.3rem; margin-bottom: 1rem;
+}
+.cat-badge {
+    display: inline-block; background: #f1f5f9; color: #334155;
+    font-size: 0.73rem; font-weight: 600;
+    padding: 0.22rem 0.7rem; border-radius: 20px; margin-right: 0.3rem; margin-bottom: 0.5rem;
+}
+.outcome-badge {
+    display: inline-block; background: linear-gradient(135deg, #0891b2, #0d9488);
+    color: white; font-size: 0.73rem; font-weight: 600;
+    padding: 0.22rem 0.7rem; border-radius: 20px; margin-right: 0.3rem; margin-bottom: 0.5rem;
+}
+.mod-badge {
+    display: inline-block; background: #e2e8f0; color: #334155;
+    font-size: 0.7rem; font-weight: 500; padding: 0.18rem 0.55rem;
+    border-radius: 20px; margin-right: 0.3rem; margin-bottom: 0.5rem;
+}
+.traj-bar {
+    background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 0.6rem 1rem; display: flex; gap: 2rem;
+    font-size: 0.82rem; color: #64748b; margin-bottom: 0.8rem;
+}
+.traj-num { font-weight: 700; font-size: 1.05rem; color: #1e293b; }
+.col-label.good { background: #f0fdf4; color: #059669; }
+.col-label.bad { background: #fef2f2; color: #dc2626; }
+.grader-msg {
+    background: #f0f9ff; border: 1px solid #2563eb; border-radius: 8px;
+    padding: 0.8rem 1rem; font-size: 0.85rem; color: #1e40af;
+    line-height: 1.6; margin-bottom: 0.8rem; font-style: italic;
+}
+.step-timeline { border-color: #e2e8f0; }
+.step-item { color: #64748b; }
+.step-item::before { background: #94a3b8; }
+.step-item.error::before { background: #dc2626; }
+.step-item.script::before { background: #2563eb; }
+.step-item.assistant::before { background: #7c3aed; }
+.overview-card {
+    background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 1.2rem 1.4rem; margin-bottom: 1rem;
+}
+.overview-card h4 {
+    font-size: 0.82rem; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.8rem 0;
+}
+"""
+
+_DARK_THEME_CSS = """
+.stApp, [data-testid="stAppViewContainer"] { background-color: #0d1117 !important; color: #e6edf3 !important; }
+section[data-testid="stSidebar"] { background: #0d1117 !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] { background: #0d1117 !important; }
+section[data-testid="stSidebar"] * { color: #e6edf3 !important; }
+.stTextInput > div > div > input { background: #0d1117 !important; color: #e6edf3 !important; border-color: #30363d !important; }
+.stTextArea > div > div > textarea { background: #0d1117 !important; color: #e6edf3 !important; border-color: #30363d !important; }
+.stSelectbox > div > div { background: #0d1117 !important; color: #e6edf3 !important; }
+[data-testid="stExpander"] { background: #161b22 !important; border-color: #30363d !important; }
+[data-testid="stExpander"] * { color: #e6edf3 !important; }
+.stMarkdown, .stMarkdown p, h1, h2, h3 { color: #e6edf3 !important; }
+hr { border-color: #30363d !important; }
+.stAlert { background: #161b22 !important; color: #e6edf3 !important; }
+.loaded-path {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 0.5rem 0.8rem; font-size: 0.78rem; color: #8b949e;
+    word-break: break-all; margin-bottom: 0.5rem;
+}
+.loaded-path strong { color: #e6edf3; }
+.sidebar-title { color: #e6edf3; font-size: 1.15rem; font-weight: 700; padding: 0.3rem 0 1rem 0; }
+section[data-testid="stSidebar"] .stButton button[kind="secondary"] {
+    background: transparent !important; color: #8b949e !important; font-weight: 400 !important;
+}
+section[data-testid="stSidebar"] .stButton button[kind="secondary"]:hover {
+    background: #21262d !important; color: #e6edf3 !important;
+}
+section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+    background: #58a6ff !important; color: #0d1117 !important; font-weight: 600 !important;
+}
+.hero-banner {
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1f3a5f 100%);
+    color: #e6edf3; padding: 2.2rem 2.5rem; border-radius: 14px; margin-bottom: 1.5rem;
+    position: relative; overflow: hidden; border: 1px solid #30363d;
+}
+.hero-banner h1 { font-size: 1.8rem; font-weight: 800; margin: 0 0 0.3rem 0; color: #e6edf3; }
+.hero-banner p { font-size: 0.92rem; color: #58a6ff; margin: 0; }
+.metric-card {
+    background: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
+    border: 1px solid #30363d; border-radius: 12px; padding: 1rem 1.2rem;
+}
+.metric-card .label { color: #8b949e; }
+.metric-card.total .value { color: #e6edf3; }
+.metric-card.pass .value { color: #3fb950; }
+.metric-card.fail .value { color: #f85149; }
+.metric-card.rate .value {
+    background: linear-gradient(135deg, #58a6ff, #bc8cff);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.section-strip {
+    background: linear-gradient(90deg, #161b22 0%, #21262d 100%);
+    color: #e6edf3; padding: 0.7rem 1.1rem; border-radius: 8px;
+    font-weight: 600; font-size: 0.92rem; margin: 1.2rem 0 1rem 0;
+    border: 1px solid #30363d;
+}
+.insight-card { border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 0.7rem; font-size: 0.9rem; line-height: 1.65; }
+.insight-card.good {
+    background: linear-gradient(135deg, #0d2818 0%, #0f3520 100%);
+    border-left: 4px solid #3fb950; color: #7ee787;
+}
+.insight-card.bad {
+    background: linear-gradient(135deg, #2d1215 0%, #3d1519 100%);
+    border-left: 4px solid #f85149; color: #ffa198;
+}
+.fix-card {
+    background: #161b22; border: 1px solid #30363d; border-left: 4px solid #d29922;
+    border-radius: 10px; padding: 1rem 1.3rem; margin-bottom: 0.7rem;
+    font-size: 0.9rem; line-height: 1.6; color: #e6edf3;
+}
+.fix-rank { font-weight: 700; color: #d29922; }
+.fix-count {
+    color: #d29922; font-size: 0.78rem; font-weight: 500;
+    background: #2d2000; padding: 0.1rem 0.5rem; border-radius: 10px; margin-left: 0.3rem;
+}
+.query-box {
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+    border: 1px solid #58a6ff; border-radius: 10px; padding: 1.1rem 1.3rem;
+    font-size: 0.92rem; color: #e6edf3; margin-bottom: 1rem; line-height: 1.7;
+}
+.grader-section {
+    background: linear-gradient(135deg, #1c1500 0%, #2d2000 100%);
+    border: 1px solid #d29922; border-radius: 10px; padding: 1.1rem 1.3rem; margin-bottom: 1rem;
+}
+.grader-title {
+    font-weight: 700; font-size: 0.76rem; color: #d29922; margin-bottom: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
+.ea-expected { background: #0d2818; border: 1px solid #238636; color: #7ee787; }
+.ea-actual { background: #2d1215; border: 1px solid #da3633; color: #ffa198; }
+.ea-label { color: #8b949e; }
+.why-section {
+    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    padding: 1.1rem 1.3rem; margin-bottom: 1rem;
+}
+.cat-badge {
+    display: inline-block; background: linear-gradient(135deg, #21262d, #30363d);
+    color: #e6edf3; font-size: 0.73rem; font-weight: 600;
+    padding: 0.22rem 0.7rem; border-radius: 20px; margin-right: 0.3rem; margin-bottom: 0.5rem;
+}
+.outcome-badge {
+    display: inline-block; background: linear-gradient(135deg, #0891b2, #0d9488);
+    color: white; font-size: 0.73rem; font-weight: 600;
+    padding: 0.22rem 0.7rem; border-radius: 20px; margin-right: 0.3rem; margin-bottom: 0.5rem;
+}
+.mod-badge {
+    display: inline-block; background: #484f58; color: #e6edf3;
+    font-size: 0.7rem; font-weight: 500; padding: 0.18rem 0.55rem;
+    border-radius: 20px; margin-right: 0.3rem; margin-bottom: 0.5rem;
+}
+.traj-bar {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 0.6rem 1rem; display: flex; gap: 2rem;
+    font-size: 0.82rem; color: #8b949e; margin-bottom: 0.8rem;
+}
+.traj-num { font-weight: 700; font-size: 1.05rem; color: #e6edf3; }
+.col-label.good { background: #0d2818; color: #7ee787; }
+.col-label.bad { background: #2d1215; color: #ffa198; }
+.grader-msg {
+    background: #0d1117; border: 1px solid #58a6ff; border-radius: 8px;
+    padding: 0.8rem 1rem; font-size: 0.85rem; color: #79c0ff;
+    line-height: 1.6; margin-bottom: 0.8rem; font-style: italic;
+}
+.step-timeline { border-color: #30363d; }
+.step-item { color: #8b949e; }
+.step-item::before { background: #484f58; }
+.step-item.error::before { background: #f85149; }
+.step-item.script::before { background: #58a6ff; }
+.step-item.assistant::before { background: #bc8cff; }
+.overview-card {
+    background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+    padding: 1.2rem 1.4rem; margin-bottom: 1rem;
+}
+.overview-card h4 {
+    font-size: 0.82rem; font-weight: 700; color: #8b949e;
+    text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.8rem 0;
+}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Data loading
+# ---------------------------------------------------------------------------
+
+@st.cache_data(show_spinner="Parsing trajectories...", ttl=300)
+def load_data(base_path: str, gem_key: str = "", groq_key: str = ""):
+    batches = auto_discover_batches(base_path)
+    all_cases = [c for cases in batches.values() for c in cases]
+    classifications = classify_all(all_cases, gemini_key=gem_key)
+    recovery_cls = classify_recovery_cases(all_cases)
+    ins = generate_insights(classifications)
+    full = generate_full_insights(all_cases, classifications)
+    narr = generate_narrative(all_cases, classifications, ins, full)
+    return batches, all_cases, classifications, recovery_cls, ins, full, narr
+
+
+# ---------------------------------------------------------------------------
+# Directory history
+# ---------------------------------------------------------------------------
+
+def _load_history():
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE) as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+
+def _save_to_history(path):
+    history = _load_history()
+    path = os.path.normpath(path)
+    if path in history:
+        history.remove(path)
+    history.insert(0, path)
+    history = history[:10]
+    os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f)
+
+
+# ---------------------------------------------------------------------------
+# Sidebar navigation
+# ---------------------------------------------------------------------------
+
+PAGES = ["Load Data", "Run Overview", "Cost & Efficiency", "Outcome Insights", "Failure Analysis", "Success Analysis", "Every Failure"]
+
+if "page" not in st.session_state:
+    st.session_state["page"] = "Load Data"
+
+st.sidebar.markdown('<div class="sidebar-title">Eval Insights</div>', unsafe_allow_html=True)
+
+dark_mode = st.sidebar.toggle("Dark mode", value=False, key="dark_mode")
+_theme_css = _DARK_THEME_CSS if dark_mode else _LIGHT_THEME_CSS
+st.markdown(f"<style>{_SHARED_CSS}\n{_theme_css}</style>", unsafe_allow_html=True)
+
+_mode = st.sidebar.radio("Mode", ["Single Run Analysis", "Run Comparison", "Run Evolution"], index=0, key="app_mode")
+
+if _mode == "Run Comparison":
+    render_comparison_mode()
+    st.stop()
+
+if _mode == "Run Evolution":
+    render_evolution_mode()
+    st.stop()
+
+for p in PAGES:
+    is_active = p == st.session_state["page"]
+    btn_type = "primary" if is_active else "secondary"
+    if st.sidebar.button(p, key=f"nav_{p}", use_container_width=True, type=btn_type):
+        st.session_state["page"] = p
+        st.rerun()
+
+page = st.session_state["page"]
+st.sidebar.markdown("---")
+if st.sidebar.button("🔄 Refresh Data", use_container_width=True):
+    load_data.clear()
+    st.rerun()
+
+if "base_path" not in st.session_state:
+    history = _load_history()
+    st.session_state["base_path"] = history[0] if history else BASE
+
+base_path = st.session_state["base_path"]
+
+try:
+    batches, all_cases, classifications, recovery_classifications, insights, full, narrative = load_data(base_path, os.environ.get("GEMINI_API_KEY", ""), os.environ.get("GROQ_API_KEY", ""))
+except Exception:
+    if page != "Load Data":
+        st.error(f"Failed to load data from: {base_path}. Go to 'Load Data' to select a valid path.")
+        st.stop()
+    else:
+        batches, all_cases, classifications, recovery_classifications, insights, full, narrative = {}, [], [], [], {}, {}, []
+
+if not all_cases and page != "Load Data":
+    st.warning("No eval batches found. Go to 'Load Data' to upload or select a directory.")
+    st.stop()
+
+st.sidebar.markdown(
+    f'<div class="loaded-path"><strong>Loaded:</strong><br>{_h(os.path.basename(base_path))}</div>',
+    unsafe_allow_html=True,
+)
+
+batch_names = sorted(batches.keys()) if batches else []
+sel_batches = st.sidebar.multiselect("Filter by batch", batch_names, default=batch_names) if batch_names else []
+
+gemini_key = os.environ.get("GEMINI_API_KEY", "")
+st.sidebar.markdown("---")
+
+# Apply filters
+f_cases = [c for c in all_cases if c.batch in sel_batches]
+f_cls = [c for c in classifications if c.batch in sel_batches]
+f_passed = [c for c in f_cases if c.passed]
+f_failed = [c for c in f_cases if not c.passed]
+total_q, total_p, total_f = len(f_cases), len(f_passed), len(f_failed)
+pass_rate = total_p / max(total_q, 1) * 100
+case_lookup = {(c.batch, c.query_index): c for c in f_cases}
+
+# Hero banner on all pages except Load Data
+if page != "Load Data":
+    st.markdown(f"""
+    <div class="hero-banner">
+        <h1>Eval Insights Platform</h1>
+        <p>{len(batches)} batches | {total_q} queries | {pass_rate:.1f}% pass rate</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="metric-strip">
+      <div class="metric-card total"><div class="label">Total Queries</div><div class="value">{total_q}</div></div>
+      <div class="metric-card pass"><div class="label">Passed</div><div class="value">{total_p}</div></div>
+      <div class="metric-card fail"><div class="label">Failed</div><div class="value">{total_f}</div></div>
+      <div class="metric-card rate"><div class="label">Pass Rate</div><div class="value">{pass_rate:.1f}%</div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ===================================================================
+# Helper: render a single failure card (reused across pages)
+# ===================================================================
+
+CAT_COLORS = ["#dc2626", "#ea580c", "#d97706", "#ca8a04", "#65a30d", "#0891b2", "#7c3aed", "#be185d"]
+
+def _cat_color(cat_name: str) -> str:
+    cat_names = sorted(set(c.primary_category for c in classifications))
+    idx = cat_names.index(cat_name) if cat_name in cat_names else 0
+    return CAT_COLORS[idx % len(CAT_COLORS)]
+
+
+_traj_evidence_cache: dict[str, str] = {}
+
+def _get_trajectory_evidence_llm(case, traj_category: str, query_text: str) -> dict:
+    """Use LLM to explain what went wrong and suggest fix. Returns {issue, fix}."""
+    cache_key = f"{case.batch}:{case.query_index}:{traj_category}"
+    if cache_key in _traj_evidence_cache:
+        return _traj_evidence_cache[cache_key]
+
+    # Check disk cache
+    cache_dir = Path(".cache")
+    cache_dir.mkdir(exist_ok=True)
+    cache_file = cache_dir / "traj_evidence.json"
+    disk_cache: dict = {}
+    if cache_file.exists():
+        try:
+            disk_cache = json.loads(cache_file.read_text(encoding="utf-8"))
+            if cache_key in disk_cache:
+                _traj_evidence_cache[cache_key] = disk_cache[cache_key]
+                return disk_cache[cache_key]
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    # Build step summary with actual script content
+    step_lines = []
+    for s in case.steps:
+        if s.step_type == "UserQuery":
+            step_lines.append(f"Step {s.step_index} [UserQuery]: \"{s.text[:200]}\"")
+        elif s.step_type == "ScriptExecution":
+            script_preview = s.script_full[:400] if s.script_full else "(empty)"
+            step_lines.append(f"Step {s.step_index} [Script]: ```{script_preview}```")
+        elif s.step_type == "ScriptResponse":
+            if s.error_type:
+                step_lines.append(f"Step {s.step_index} [ERROR]: {s.error_type} | console: {s.console[:250] if s.console else 'none'} | result: {s.result[:250] if s.result else 'none'}")
+            else:
+                step_lines.append(f"Step {s.step_index} [OK]: {s.result[:150] if s.result else 'success'}")
+        elif s.step_type == "Assistant":
+            step_lines.append(f"Step {s.step_index} [Agent]: \"{s.text[:200]}\"")
+
+    cat_desc = TRAJECTORY_CATEGORIES.get(traj_category, "")
+
+    category_focus = {
+        "Tool Misuse": "Find the exact step(s) where the agent used the WRONG API, function, or parameters. Identify the incorrect method call and what the correct one should be.",
+        "Context Loss": "Find the exact step(s) where the agent forgot or ignored earlier context/state. Show what context was available vs what the agent actually used.",
+        "Goal Drift": "Find the exact step(s) where the agent started doing something different from the original query. Show where it deviated and what it started doing instead.",
+        "Retry Loops": "Find the exact steps where the agent REPEATED the same or similar failing approach multiple times without adapting. Show the repeated pattern — which steps are near-identical retries.",
+        "Silent Quality Degradation": "The output has no script errors but the result is wrong. Find exactly WHERE the agent produced the wrong output — which step computed or wrote the incorrect value, and what the correct approach should be.",
+        "Cascading Errors": "Find the FIRST error that triggered a chain of downstream failures. Show the initial error step and how subsequent steps failed because of it.",
+    }
+    focus = category_focus.get(traj_category, "")
+
+    if traj_category == "Unclassified" or not focus:
+        prompt = f"""You are analyzing an Excel Copilot agent trajectory that failed.
+
+YOUR TASK: Identify what went wrong in this trajectory. What caused the failure? What should the agent have done differently?
+
+IMPORTANT:
+- Be concise. No preamble, no filler. Start directly with the finding.
+- Max 2 sentences per field.
+
+QUERY: "{query_text}"
+
+TRAJECTORY:
+{chr(10).join(step_lines)}
+
+Return ONLY valid JSON: {{"issue": "...", "fix": "..."}}"""
+    else:
+        prompt = f"""You are analyzing an Excel Copilot agent trajectory classified as "{traj_category}" ({cat_desc}).
+
+YOUR TASK: {focus}
+
+IMPORTANT:
+- Explain specifically what went wrong in this trajectory in the context of "{traj_category}".
+- ALWAYS provide a concrete fix for the issue in the fix field. Never return null or "None".
+- Be concise. No preamble, no filler. Start directly with the finding.
+- Max 2 sentences per field.
+
+QUERY: "{query_text}"
+
+TRAJECTORY:
+{chr(10).join(step_lines)}
+
+Return ONLY valid JSON: {{"issue": "...", "fix": "..."}}"""
+
+    resp, _ = fc._call_llm(prompt, max_tokens=300)
+    result = {"issue": "", "fix": ""}
+    if resp:
+        try:
+            cleaned = resp.strip()
+            if cleaned.startswith("```"):
+                cleaned = _re.sub(r"^```\w*\n?", "", cleaned)
+                cleaned = _re.sub(r"\n?```$", "", cleaned)
+            parsed = json.loads(cleaned)
+            if isinstance(parsed, dict):
+                result = {"issue": parsed.get("issue", ""), "fix": parsed.get("fix", "")}
+        except (json.JSONDecodeError, ValueError):
+            result = {"issue": resp.strip(), "fix": ""}
+
+    if result["issue"]:
+        _traj_evidence_cache[cache_key] = result
+        disk_cache[cache_key] = result
+        try:
+            cache_file.write_text(json.dumps(disk_cache, indent=2, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+
+    return result
+
+
+def _render_failure_card(cr, show_trajectory=False):
+    """Render a full failure card with grader evidence, trajectory, and reasoning."""
+    case = case_lookup.get((cr.batch, cr.query_index))
+    color = _cat_color(cr.primary_category)
+
+    # Badges -- trajectory (multi-label) + outcome
+    traj_cats = cr.trajectory_categories if cr.trajectory_categories else [cr.trajectory_category or cr.primary_category]
+    badges = ""
+    for tc in traj_cats:
+        badges += f'<span class="cat-badge">{_h(tc)}</span>'
+    if cr.outcome_category:
+        outc_label = cr.outcome_category[:40] + ("..." if len(cr.outcome_category) > 40 else "")
+        badges += f'<span class="outcome-badge">{_h(outc_label)}</span>'
+    for sec in cr.secondary_categories:
+        badges += f'<span class="mod-badge">{_h(sec)}</span>'
+
+    # Confidence badge
+    conf_colors = {"high": "#059669", "medium": "#d97706", "low": "#94a3b8"}
+    conf_color = conf_colors.get(cr.confidence, "#94a3b8")
+    conf_badge = (
+        f'<span style="display:inline-block;background:{conf_color};color:white;'
+        f'font-size:0.68rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:12px;'
+        f'margin-left:0.3rem">{_h(cr.confidence)}</span>'
+    )
+
+    # Header
+    st.markdown(
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem">'
+        f'<span style="font-size:0.92rem;font-weight:700;color:#1e293b">'
+        f'{_h(cr.batch)} Q{_h(cr.query_index)}</span>'
+        f'<span>{badges}{conf_badge}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    # Query
+    st.markdown(f'<div class="query-box">{_h(cr.query_text)}</div>', unsafe_allow_html=True)
+
+    # Grader evidence — first unique assertion only (multiple assertions for same query are redundant)
+    if case:
+        ev = extract_grader_evidence(case)
+
+        if ev.assertions:
+            a = ev.assertions[0]
+            reason = a.get("reason", "")
+            exp = a.get("expected", "")
+            act = a.get("actual", "")
+            assertion_html = (
+                '<div style="max-height:200px;overflow-y:auto;background:#fffbeb;border:1px solid #fcd34d;'
+                'border-left:4px solid #f59e0b;border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:0.5rem">'
+                '<div style="font-size:0.72rem;font-weight:700;color:#92400e;text-transform:uppercase;'
+                'letter-spacing:0.05em;margin-bottom:0.4rem">What the grader found</div>'
+            )
+            if exp and act and exp != "None" and act != "None":
+                assertion_html += (
+                    f'<div class="ea-row">'
+                    f'<div class="ea-col ea-expected"><div class="ea-label">Expected</div>'
+                    f'{_h(exp)}</div>'
+                    f'<div class="ea-col ea-actual"><div class="ea-label">Got</div>'
+                    f'{_h(act)}</div></div>'
+                )
+            elif reason:
+                assertion_html += (
+                    f'<div style="font-size:0.82rem;color:#64748b">{_h(reason)}</div>'
+                )
+            if len(ev.assertions) > 1:
+                assertion_html += (
+                    f'<div style="font-size:0.75rem;color:#92400e;margin-top:0.3rem;font-style:italic">'
+                    f'+ {len(ev.assertions) - 1} more assertion(s) with similar findings</div>'
+                )
+            assertion_html += '</div>'
+            st.markdown(assertion_html, unsafe_allow_html=True)
+        elif ev.grader_message:
+            st.markdown(
+                f'<div style="max-height:200px;overflow-y:auto;background:#fffbeb;border:1px solid #fcd34d;'
+                f'border-left:4px solid #f59e0b;border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:0.5rem">'
+                f'<div style="font-size:0.72rem;font-weight:700;color:#92400e;text-transform:uppercase;'
+                f'letter-spacing:0.05em;margin-bottom:0.4rem">What the grader found</div>'
+                f'<div style="font-size:0.82rem;color:#64748b">{_h(ev.grader_message)}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # Assertion scores
+        if ev.assertion_scores:
+            st.markdown(
+                f'<div class="traj-bar">'
+                f'<div><span class="traj-num" style="color:#059669">{ev.total_correct}</span> correct</div>'
+                f'<div><span class="traj-num" style="color:#dc2626">{ev.total_incorrect}</span> incorrect</div>'
+                f'<div><span class="traj-num" style="color:#d97706">{ev.total_missing}</span> missing</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Why this trajectory category — specific evidence from the trajectory
+    if cr.why:
+        st.markdown(
+            f'<div style="font-size:0.85rem;color:#475569;font-style:italic;'
+            f'margin-bottom:0.5rem">{_h(cr.why)}</div>',
+            unsafe_allow_html=True,
+        )
+
+    # Trajectory evidence — LLM-powered: issue + fix
+    if case and cr.trajectory_category and cr.trajectory_category != "Unclassified":
+        traj_ev = _get_trajectory_evidence_llm(case, cr.trajectory_category, cr.query_text)
+        if traj_ev and traj_ev.get("issue"):
+            issue_html = (
+                f'<div style="background:#f5f3ff;border:1px solid #ddd6fe;'
+                f'border-left:4px solid #7c3aed;border-radius:8px;'
+                f'padding:0.6rem 0.8rem;margin-bottom:0.5rem;font-size:0.82rem">'
+                f'<div style="font-weight:600;color:#7c3aed;margin-bottom:0.3rem">'
+                f'What went wrong</div>'
+                f'<div style="color:#4c1d95">{_h(traj_ev["issue"])}</div>'
+            )
+            if traj_ev.get("fix"):
+                issue_html += (
+                    f'<div style="margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid #ddd6fe">'
+                    f'<span style="font-weight:600;color:#059669">Suggested fix:</span> '
+                    f'<span style="color:#065f46">{_h(traj_ev["fix"])}</span></div>'
+                )
+            issue_html += '</div>'
+            st.markdown(issue_html, unsafe_allow_html=True)
+
+    # Trajectory stats bar
+    if case:
+        exec_time = case.execution_time_sec
+        time_str = f"{exec_time:.1f}s" if exec_time else "n/a"
+        # Detect retry loops: consecutive ScriptExecution→ErrorResponse cycles with similar scripts
+        retry_loops = []
+        consecutive_errors = 0
+        loop_start_step = None
+        for s in case.steps:
+            if s.step_type == "ScriptResponse" and s.error_type:
+                if consecutive_errors == 0:
+                    loop_start_step = s.step_index
+                consecutive_errors += 1
+            elif s.step_type == "ScriptResponse" and not s.error_type:
+                if consecutive_errors >= 2:
+                    retry_loops.append((loop_start_step, s.step_index - 1, consecutive_errors))
+                consecutive_errors = 0
+                loop_start_step = None
+            elif s.step_type == "ScriptExecution":
+                pass
+        if consecutive_errors >= 2:
+            last_step = case.steps[-1].step_index if case.steps else 0
+            retry_loops.append((loop_start_step, last_step, consecutive_errors))
+
+        st.markdown(
+            f'<div class="traj-bar">'
+            f'<div><span class="traj-num">{case.step_count}</span> steps</div>'
+            f'<div><span class="traj-num">{case.error_count}</span> errors</div>'
+            f'<div title="Number of Office.js scripts sent to the Excel runtime for execution">'
+            f'<span class="traj-num">{case.script_exec_count}</span> script executions</div>'
+            f'<div><span class="traj-num">{time_str}</span> exec time</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        if retry_loops:
+            loop_parts = []
+            for start, end, count in retry_loops:
+                loop_parts.append(f"steps {start}–{end} ({count} consecutive)")
+            st.markdown(
+                f'<div style="font-size:0.8rem;color:#b45309;margin-top:2px;">'
+                f'⚠️ Consecutive script failures: {"; ".join(loop_parts)}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Trajectory timeline (collapsible)
+    if show_trajectory and case:
+        timeline = '<details><summary style="cursor:pointer;font-size:0.82rem;font-weight:600;color:#7c3aed;margin-bottom:0.3rem">Trajectory Steps ({} steps)</summary><div class="step-timeline">'.format(case.step_count)
+        for step in case.steps:
+            if step.step_type == "UserQuery":
+                timeline += (
+                    f'<div class="step-item">'
+                    f'<strong>Step {step.step_index} -- Query:</strong> '
+                    f'"{_h(step.text[:100])}"</div>'
+                )
+            elif step.step_type == "ScriptExecution":
+                intent = describe_script(step.script_full)
+                timeline += (
+                    f'<div class="step-item script">'
+                    f'<strong>Step {step.step_index} -- Script:</strong> '
+                    f'{_h(intent)} ({step.script_len} chars)</div>'
+                )
+            elif step.step_type == "ScriptResponse":
+                if step.error_type:
+                    timeline += (
+                        f'<div class="step-item error">'
+                        f'<strong>Step {step.step_index} -- ERROR:</strong> '
+                        f'{_h(step.error_type)}'
+                        + (f' -- {_h(step.console[:100])}' if step.console else '')
+                        + '</div>'
+                    )
+                else:
+                    result_preview = step.result[:80] if step.result else "OK"
+                    timeline += (
+                        f'<div class="step-item">'
+                        f'<strong>Step {step.step_index} -- Response:</strong> '
+                        f'{_h(result_preview)}</div>'
+                    )
+            elif step.step_type == "Assistant":
+                timeline += (
+                    f'<div class="step-item assistant">'
+                    f'<strong>Step {step.step_index} -- Agent:</strong> '
+                    f'"{_h(step.text[:120])}"</div>'
+                )
+        timeline += '</div></details>'
+        st.markdown(timeline, unsafe_allow_html=True)
+
+
+
+
+# ===================================================================
+# PAGE: Load Data
+# ===================================================================
+
+if page == "Load Data":
+    st.header("Load Eval Results")
+
+    source = st.radio("Source", ["Folder path", "Upload ZIP"], horizontal=True)
+
+    if source == "Upload ZIP":
+        uploaded = st.file_uploader("Upload a ZIP of eval results (up to 1 GB)", type=["zip"])
+        if uploaded:
+            zip_hash = hashlib.md5(uploaded.getvalue()).hexdigest()[:10]
+            extract_dir = os.path.join(tempfile.gettempdir(), f"eval_{zip_hash}")
+            if not os.path.exists(extract_dir):
+                with zipfile.ZipFile(io.BytesIO(uploaded.getvalue())) as zf:
+                    zf.extractall(extract_dir)
+                st.success(f"Uploaded and extracted successfully: {uploaded.name}")
+            if st.session_state.get("base_path") != extract_dir:
+                st.session_state["base_path"] = extract_dir
+                _save_to_history(extract_dir)
+                st.rerun()
+    else:
+        history = _load_history()
+        if history:
+            selected = st.selectbox("Recent paths", history)
+        else:
+            selected = ""
+        new_path = st.text_input("Or enter a new folder path", value="")
+        if st.button("Load"):
+            path = new_path.strip() if new_path.strip() else selected
+            if path and os.path.isdir(path):
+                st.session_state["base_path"] = path
+                _save_to_history(path)
+                st.rerun()
+            else:
+                st.error("Invalid directory path.")
+
+    if f_cases:
+        st.markdown("---")
+        st.subheader("Currently Loaded")
+        batch_rows = []
+        for bn in sorted(sel_batches):
+            bc = [c for c in f_cases if c.batch == bn]
+            bf = sum(1 for c in bc if not c.passed)
+            bt = len(bc)
+            batch_rows.append({
+                "Batch": bn, "Total": bt, "Passed": bt - bf,
+                "Failed": bf, "Pass Rate": f"{(bt - bf) / max(bt, 1) * 100:.1f}%",
+            })
+        if batch_rows:
+            st.dataframe(pd.DataFrame(batch_rows), hide_index=True)
+
+
+# ===================================================================
+# PAGE: Run Overview (comprehensive quantitative analysis)
+# ===================================================================
+
+elif page == "Run Overview":
+
+    # --- Executive Summary (LLM-generated cross-tab synthesis) ---
+    st.markdown('<div class="section-strip">Executive Summary</div>', unsafe_allow_html=True)
+    f_recovery_cls = [rc for rc in recovery_classifications if rc.batch in sel_batches] if recovery_classifications else []
+    with st.spinner("Generating executive summary..."):
+        exec_summary = generate_executive_summary(f_cases, f_cls, f_recovery_cls)
+    if exec_summary:
+        paras = exec_summary.split("\n\n")
+        summary_html = "".join(f"<p>{_h(p.strip())}</p>" for p in paras if p.strip())
+        st.markdown(
+            f'<div style="background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);'
+            f'border:1px solid #e2e8f0;border-left:5px solid #2563eb;border-radius:12px;'
+            f'padding:1.5rem 1.8rem;margin-bottom:1.5rem;font-size:0.9rem;line-height:1.8;'
+            f'color:#1e293b">{summary_html}</div>',
+            unsafe_allow_html=True,
+        )
+
+    # --- Per-batch breakdown table ---
+    st.markdown('<div class="section-strip">Per-Batch Results</div>', unsafe_allow_html=True)
+    batch_rows = []
+    for bn in sorted(sel_batches):
+        bc = [c for c in f_cases if c.batch == bn]
+        bp = sum(1 for c in bc if c.passed)
+        bf = sum(1 for c in bc if not c.passed)
+        bt = len(bc)
+        avg_steps = sum(c.step_count for c in bc) / max(bt, 1)
+        avg_errors = sum(c.error_count for c in bc) / max(bt, 1)
+        avg_time = sum(c.execution_time_sec for c in bc) / max(bt, 1)
+        batch_rows.append({
+            "Batch": bn, "Total": bt, "Passed": bp, "Failed": bf,
+            "Pass Rate": f"{bp / max(bt, 1) * 100:.1f}%",
+            "Avg Trajectory Steps": f"{avg_steps:.1f}",
+            "Avg Script Errors": f"{avg_errors:.1f}",
+            "Avg Workflow Execution (s)": f"{avg_time:.1f}",
+        })
+    if batch_rows:
+        st.dataframe(pd.DataFrame(batch_rows), hide_index=True)
+        with st.popover("ℹ️"):
+            st.markdown(
+                "**Avg Trajectory Steps** = total steps in the agent's trajectory "
+                "(UserQuery, ScriptExecution, ScriptResponse, Thoughts, Assistant messages). "
+                "**Avg Script Errors** = count of ScriptResponse steps that returned an error "
+                "(e.g., InvalidArgument, ItemNotFound). "
+                "**Avg Workflow Execution (s)** = `workflowExecutionInSec` from the eval JSON "
+                "(end-to-end agent execution time, not grading time)."
+            )
+
+    # --- Pass/fail by specificity (computed from filtered cases) ---
+    _spec_stats: dict[str, dict] = {}
+    _spec_order = ["Very Well-Specified", "Well-Specified", "Reasonably Specified", "Ambiguous", "Very Ambiguous"]
+    for c in f_cases:
+        sp = _tag_value(c, "taxonomy.query.specificity")
+        if sp:
+            _spec_stats.setdefault(sp, {"pass": 0, "fail": 0})
+            _spec_stats[sp]["pass" if c.passed else "fail"] += 1
+    spec_data = []
+    for sp in _spec_order:
+        if sp in _spec_stats:
+            s = _spec_stats[sp]
+            t = s["pass"] + s["fail"]
+            spec_data.append({"level": sp, "total": t, "passed": s["pass"], "failed": s["fail"], "fail_rate": round(s["fail"] / t * 100)})
+    if spec_data:
+        st.markdown('<div class="section-strip">Pass/Fail by Query Specificity</div>', unsafe_allow_html=True)
+        with st.popover("ℹ️"):
+            st.markdown("Source: `taxonomy.query.specificity` tag from the eval dataset (pre-labeled by dataset authors, not computed by this platform).")
+        df_spec = pd.DataFrame(spec_data).rename(columns={
+            "level": "Specificity", "total": "Total", "passed": "Passed",
+            "failed": "Failed", "fail_rate": "Fail Rate %",
+        })
+        st.dataframe(df_spec, hide_index=True)
+        with st.expander("Show queries in each specificity bucket"):
+            for row in spec_data:
+                level = row.get("level", "")
+                matching = [c for c in f_cases if _tag_value(c, "taxonomy.query.specificity") == level]
+                if matching:
+                    st.markdown(f"**{level}** ({len(matching)} queries)")
+                    for c in matching:
+                        status = "Pass" if c.passed else "Fail"
+                        st.markdown(f"- `{c.batch}` Q{c.query_index}: \"{c.query_text[:100]}\" — **{status}**")
+
+    # --- Pass/fail by complexity (computed from filtered cases) ---
+    _comp_stats: dict[str, dict] = {}
+    _comp_order = ["L1 Actions", "L2 Feature Usage", "L3 Multi-step Tasks", "L4 Workflows"]
+    for c in f_cases:
+        cp = _tag_value(c, "taxonomy.query.intent.complexity")
+        if cp:
+            _comp_stats.setdefault(cp, {"pass": 0, "fail": 0})
+            _comp_stats[cp]["pass" if c.passed else "fail"] += 1
+    comp_data = []
+    for cp in _comp_order:
+        if cp in _comp_stats:
+            s = _comp_stats[cp]
+            t = s["pass"] + s["fail"]
+            comp_data.append({"level": cp, "total": t, "passed": s["pass"], "failed": s["fail"], "fail_rate": round(s["fail"] / t * 100)})
+    if comp_data:
+        st.markdown('<div class="section-strip">Pass/Fail by Complexity</div>', unsafe_allow_html=True)
+        with st.popover("ℹ️"):
+            st.markdown("Source: `taxonomy.query.intent.complexity` tag from the eval dataset (pre-labeled by dataset authors, not computed by this platform).")
+        df_comp = pd.DataFrame(comp_data).rename(columns={
+            "level": "Complexity", "total": "Total", "passed": "Passed",
+            "failed": "Failed", "fail_rate": "Fail Rate %",
+        })
+        st.dataframe(df_comp, hide_index=True)
+        with st.expander("Show queries in each complexity bucket"):
+            for row in comp_data:
+                level = row.get("level", "")
+                matching = [c for c in f_cases if _tag_value(c, "taxonomy.query.intent.complexity") == level]
+                if matching:
+                    st.markdown(f"**{level}** ({len(matching)} queries)")
+                    for c in matching:
+                        status = "Pass" if c.passed else "Fail"
+                        st.markdown(f"- `{c.batch}` Q{c.query_index}: \"{c.query_text[:100]}\" — **{status}**")
+
+    # --- Pass/fail by intent (computed from filtered cases) ---
+    _intent_stats: dict[str, dict] = {}
+    for c in f_cases:
+        it = _tag_value(c, "taxonomy.query.intent.primary")
+        if it:
+            _intent_stats.setdefault(it, {"pass": 0, "fail": 0})
+            _intent_stats[it]["pass" if c.passed else "fail"] += 1
+    intent_data = []
+    for it, s in sorted(_intent_stats.items(), key=lambda x: x[1]["fail"] / max(x[1]["pass"] + x[1]["fail"], 1), reverse=True):
+        t = s["pass"] + s["fail"]
+        intent_data.append({"intent": it, "total": t, "passed": s["pass"], "failed": s["fail"], "fail_rate": round(s["fail"] / t * 100)})
+    if intent_data:
+        st.markdown('<div class="section-strip">Pass/Fail by Intent</div>', unsafe_allow_html=True)
+        with st.popover("ℹ️"):
+            st.markdown("Source: `taxonomy.query.intent.primary` tag from the eval dataset.")
+        df_intent = pd.DataFrame(intent_data).rename(columns={
+            "intent": "Intent", "total": "Total", "passed": "Passed",
+            "failed": "Failed", "fail_rate": "Fail Rate %",
+        })
+        st.dataframe(df_intent.sort_values("Fail Rate %", ascending=False), hide_index=True)
+        with st.expander("Show queries in each intent bucket"):
+            for row in intent_data:
+                intent = row.get("intent", "")
+                matching = [c for c in f_cases if _tag_value(c, "taxonomy.query.intent.primary") == intent]
+                if matching:
+                    st.markdown(f"**{intent}** ({len(matching)} queries)")
+                    for c in matching:
+                        status = "Pass" if c.passed else "Fail"
+                        st.markdown(f"- `{c.batch}` Q{c.query_index}: \"{c.query_text[:100]}\" — **{status}**")
+
+    # --- Error type distribution ---
+    st.markdown('<div class="section-strip">Error Type Distribution (across all cases)</div>', unsafe_allow_html=True)
+    error_counter = Counter()
+    for c in f_cases:
+        for et in c.error_types:
+            error_counter[et] += 1
+    if error_counter:
+        cases_with_errs = sum(1 for c in f_cases if c.error_count > 0)
+        passed_with_errs = sum(1 for c in f_passed if c.error_count > 0)
+        failed_with_errs = sum(1 for c in f_failed if c.error_count > 0)
+        err_rows = []
+        for et, cnt in error_counter.most_common():
+            p_cnt = sum(1 for c in f_passed if et in c.error_types)
+            f_cnt = sum(1 for c in f_failed if et in c.error_types)
+            err_rows.append({"Error Type": et, "Total Occurrences": cnt,
+                             "Cases Passed": p_cnt, "Cases Failed": f_cnt})
+        st.dataframe(pd.DataFrame(err_rows), hide_index=True)
+        recovery_rows = [
+            {"": "Cases with errors", "Count": cases_with_errs,
+             "Passed (recovered)": passed_with_errs, "Failed": failed_with_errs},
+            {"": "Cases without errors", "Count": len(f_cases) - cases_with_errs,
+             "Passed (recovered)": len(f_passed) - passed_with_errs,
+             "Failed": len(f_failed) - failed_with_errs},
+        ]
+        st.dataframe(pd.DataFrame(recovery_rows), hide_index=True)
+        with st.popover("ℹ️"):
+            st.markdown(
+                "These are Office.js script execution errors across **all cases** "
+                "(not just failures). Errors are detected by regex-matching the ScriptResponse text. "
+                "A case can hit multiple errors and still pass -- the agent retries with a different approach. "
+                "**Cases Passed** = how many cases with that error type still produced the correct answer."
+            )
+    else:
+        st.info("No script errors recorded across all cases.")
+
+    # --- Execution time distribution ---
+    st.markdown('<div class="section-strip">Workflow Execution Time (workflowExecutionInSec)</div>', unsafe_allow_html=True)
+    times_pass = [c.execution_time_sec for c in f_passed if c.execution_time_sec > 0]
+    times_fail = [c.execution_time_sec for c in f_failed if c.execution_time_sec > 0]
+
+    col1, col2, col3, col4 = st.columns(4)
+    if times_pass:
+        col1.metric("Avg Time (Pass)", f"{sum(times_pass)/len(times_pass):.1f}s")
+        col2.metric("Max Time (Pass)", f"{max(times_pass):.1f}s")
+    if times_fail:
+        col3.metric("Avg Time (Fail)", f"{sum(times_fail)/len(times_fail):.1f}s")
+        col4.metric("Max Time (Fail)", f"{max(times_fail):.1f}s")
+
+    # --- Trajectory stats comparison ---
+    st.markdown('<div class="section-strip">Trajectory Stats: Pass vs Fail</div>', unsafe_allow_html=True)
+    if f_passed and f_failed:
+        stats_rows = []
+        for label, cases_set in [("Passed", f_passed), ("Failed", f_failed)]:
+            n = len(cases_set)
+            stats_rows.append({
+                "Group": label,
+                "Count": n,
+                "Avg Steps": f"{sum(c.step_count for c in cases_set)/n:.1f}",
+                "Avg Scripts": f"{sum(c.script_exec_count for c in cases_set)/n:.1f}",
+                "Avg Errors": f"{sum(c.error_count for c in cases_set)/n:.1f}",
+                "Avg Thoughts (chars)": f"{sum(c.thoughts_total_chars for c in cases_set)/n:.0f}",
+                "Success Claims": sum(1 for c in cases_set if c.has_success_claim),
+            })
+        st.dataframe(pd.DataFrame(stats_rows), hide_index=True)
+        failed_claims = sum(1 for c in f_failed if c.has_success_claim)
+        if failed_claims > 0:
+            with st.popover("ℹ️"):
+                st.markdown(
+                    f"**Success Claims** = the agent's response contained phrases like "
+                    f"\"Done!\", \"Successfully\", or \"completed successfully\". "
+                    f"**{failed_claims} out of {len(f_failed)} failed cases claimed success** "
+                    f"-- the agent said it finished correctly, but the grader found the output was wrong. "
+                    f"This means the agent has no self-awareness of its mistakes and never flags doubt or uncertainty."
+                )
+        else:
+            with st.popover("ℹ️"):
+                st.markdown(
+                    "**Success Claims** = the agent's response contained phrases like "
+                    "\"Done!\", \"Successfully\", or \"completed successfully\"."
+                )
+
+    # --- Assertion score summary ---
+    st.markdown('<div class="section-strip">Assertion Score Summary (failed cases)</div>', unsafe_allow_html=True)
+    total_correct = 0
+    total_incorrect = 0
+    total_missing = 0
+    cases_with_scores = 0
+    for c in f_failed:
+        ev = extract_grader_evidence(c)
+        if ev.assertion_scores:
+            cases_with_scores += 1
+            total_correct += ev.total_correct
+            total_incorrect += ev.total_incorrect
+            total_missing += ev.total_missing
+
+    if cases_with_scores:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Cases with Scores", cases_with_scores)
+        c2.metric("Total Correct", total_correct)
+        c3.metric("Total Incorrect", total_incorrect)
+        c4.metric("Total Missing", total_missing)
+
+        partial = sum(1 for c in f_failed if extract_grader_evidence(c).has_partial_scores)
+        all_wrong = cases_with_scores - partial
+        st.markdown(
+            f'<div class="insight-card bad">'
+            f'<strong>{partial}</strong> failures have partial credit (some assertions correct). '
+            f'<strong>{all_wrong}</strong> failures have zero correct assertions.</div>',
+            unsafe_allow_html=True,
+        )
+        with st.popover("ℹ️"):
+            st.markdown(
+                "The grader checks each failed case against specific assertions (expected cell values, "
+                "formatting, etc.). **Cases with Scores** = how many failed cases had assertion-level "
+                "scoring (some use LLM judges without assertions). **Total Correct/Incorrect** = "
+                "individual assertion results across all scored failures. "
+                "**Partial credit** = at least one assertion correct but case still failed overall. "
+                "**Zero correct** = every single assertion wrong -- the agent's output was completely off."
+            )
+    else:
+        st.info("No assertion scores available for failed cases.")
+
+    # --- Evaluator type breakdown ---
+    st.markdown('<div class="section-strip">Evaluator Types Used</div>', unsafe_allow_html=True)
+    eval_types = Counter()
+    for c in f_cases:
+        ev = extract_grader_evidence(c)
+        eval_types[ev.evaluator_type] += 1
+    if eval_types:
+        eval_pass = Counter()
+        eval_fail = Counter()
+        for c in f_cases:
+            ev = extract_grader_evidence(c)
+            if c.passed:
+                eval_pass[ev.evaluator_type] += 1
+            else:
+                eval_fail[ev.evaluator_type] += 1
+        et_rows = []
+        for et, cnt in eval_types.most_common():
+            p = eval_pass.get(et, 0)
+            f_ = eval_fail.get(et, 0)
+            pr = round(p / max(cnt, 1) * 100)
+            et_rows.append({"Evaluator": et, "Count": cnt, "Passed": p, "Failed": f_, "Pass Rate": f"{pr}%"})
+        st.dataframe(pd.DataFrame(et_rows), hide_index=True)
+        with st.popover("ℹ️"):
+            st.markdown(
+                "Evaluator type is detected from the `evaluationResults` in the eval JSON. "
+                "**Office.js (deterministic)** = a script checked exact cell values/formatting against expected answers. "
+                "**LLM grader** = an LLM judged whether the agent's output was correct. "
+                "**unknown** = the evaluator format didn't match known patterns. "
+                "Cases graded by LLM may lack assertion-level scores, which is why some failures "
+                "are missing from the Assertion Score Summary above."
+            )
+
+
+
+# ===================================================================
+# PAGE: Cost & Efficiency (trajectory cost reduction analysis)
+# ===================================================================
+
+elif page == "Cost & Efficiency":
+
+    st.markdown('<div class="section-strip">Cost &amp; Efficiency Analysis</div>', unsafe_allow_html=True)
+    with st.spinner("Analyzing trajectory efficiency..."):
+        traj_eff = analyze_trajectory_efficiency(f_cases)
+
+    _agg = traj_eff.get("aggregate", {})
+    _wasteful = traj_eff.get("wasteful_cases", [])
+    _failure_waste = traj_eff.get("failure_waste", [])
+    _script_bloat = traj_eff.get("script_bloat", {})
+    _oversized = traj_eff.get("oversized_scripts", [])
+    _thoughts_oh = traj_eff.get("thoughts_overhead", {})
+    _early_fail = traj_eff.get("early_failure", {})
+    _round_trips = traj_eff.get("round_trips", {})
+    _console_bl = traj_eff.get("console_bloat", {})
+    _llm_cost = traj_eff.get("llm_insights", "")
+
+    _tc = _agg.get("total_cases", 0)
+    if _tc > 0:
+        _t_recovery = _agg.get("total_recovery", 0)
+        _t_golden = _agg.get("total_golden", 0)
+        _t_failed = _agg.get("total_failed", 0)
+        _t_wasted = _agg.get("total_wasted_success", 0)
+        _fs = _agg.get("total_failed_steps", 0)
+
+        # ── Compact overview KPIs ────────────────────────────────────────
+        st.markdown(f"""
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.7rem;margin-bottom:1rem">
+            <div class="metric-card"><div class="label">Golden (Clean Pass)</div><div class="value" style="font-size:1.5rem;color:#16a34a">{_t_golden}</div></div>
+            <div class="metric-card"><div class="label">Recovery (Errors→Pass)</div><div class="value" style="font-size:1.5rem;color:#d97706">{_t_recovery}</div></div>
+            <div class="metric-card"><div class="label">Failed</div><div class="value" style="font-size:1.5rem;color:#dc2626">{_t_failed}</div></div>
+            <div class="metric-card"><div class="label">Wasted Steps (Recovery)</div><div class="value" style="font-size:1.5rem;color:#dc2626">{_t_wasted}</div></div>
+            <div class="metric-card"><div class="label">Steps Burned on Failures</div><div class="value" style="font-size:1.5rem;color:#991b1b">{_fs}</div></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(
+            f"Golden trajectories average **{_agg.get('avg_golden_steps', 0)}** steps. "
+            f"Recovery cases average **{_agg.get('avg_recovery_steps', 0)}** steps "
+            f"({_agg.get('overhead_pct', 0)}% overhead from error retries). "
+            f"Failed cases average **{_agg.get('avg_failed_steps', 0)}** steps — "
+            f"**{_fs}** total steps spent on queries that ultimately failed."
+        )
+
+        # ── PRIMARY: LLM Step-Skip Intelligence ─────────────────────────
+        if _llm_cost:
+            st.markdown(
+                f'<div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);'
+                f'border:1px solid #fcd34d;border-left:5px solid #f59e0b;border-radius:12px;'
+                f'padding:1.3rem 1.6rem;font-size:0.9rem;line-height:1.8;color:#1e293b;margin:1rem 0">'
+                f'<div style="font-size:0.72rem;font-weight:700;color:#92400e;text-transform:uppercase;'
+                f'letter-spacing:0.08em;margin-bottom:0.5rem">'
+                f'LLM-Identified Unnecessary Steps &amp; Cost Reduction Opportunities</div></div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(_llm_cost)
+
+        # ── SECONDARY: Supporting Data (collapsed) ──────────────────────
+        with st.expander("Supporting Data — Detailed Breakdown", expanded=False):
+            # Wasted steps (Recovery Cases)
+            if _t_recovery > 0 and _wasteful:
+                st.markdown("##### Wasted Steps — Recovery Cases")
+                _avg_wasted = round(_t_wasted / max(_t_recovery, 1), 1)
+                st.markdown(
+                    f"**{_t_recovery}** recovery cases, **{_avg_wasted}** avg wasted steps, "
+                    f"**{_agg.get('thrashing_cases', 0)}** thrashing cases"
+                )
+                _common_errs = _agg.get("common_wasted_errors", {})
+                if _common_errs:
+                    _err_items = " | ".join(f"**{et}**: {cnt}" for et, cnt in sorted(_common_errs.items(), key=lambda x: -x[1]))
+                    st.markdown(
+                        f'<div style="background:#fef2f2;border:1px solid #fca5a5;border-left:4px solid #dc2626;'
+                        f'border-radius:10px;padding:0.8rem 1.1rem;margin:0.5rem 0;font-size:0.85rem;color:#7f1d1d">'
+                        f'<strong>Wasted error types:</strong> {_err_items}</div>',
+                        unsafe_allow_html=True,
+                    )
+                _wf_rows = []
+                for w in _wasteful[:15]:
+                    _wf_rows.append({
+                        "Batch": w["batch"], "Query": f"Q{w['query_index']}",
+                        "Steps": w["step_count"], "Scripts": w["script_exec_count"],
+                        "Errors": w["error_count"], "Error Rate": f"{w['error_rate']}%",
+                        "Wasted": w["wasted_step_count"], "Savings": f"{w['savings_pct']}%",
+                        "Thrashing": "Yes" if w["has_thrashing"] else "",
+                    })
+                st.dataframe(pd.DataFrame(_wf_rows), use_container_width=True, hide_index=True)
+
+            # Failure Trajectory Waste
+            if _t_failed > 0 and _failure_waste:
+                st.markdown("##### Failure Trajectory Waste")
+                _fsc = _agg.get("total_failed_scripts", 0)
+                _ft = _agg.get("total_failed_time_sec", 0)
+                _dc = _early_fail.get("doomed_count", 0)
+                st.markdown(
+                    f"**{_t_failed}** failed queries: **{_fs}** steps, **{_fsc}** scripts, "
+                    f"**{_ft}s** execution time. **{_dc}** doomed trajectories (15+ steps then fail)."
+                )
+                _fw_rows = []
+                for fw in _failure_waste[:15]:
+                    _fw_rows.append({
+                        "Batch": fw["batch"], "Query": f"Q{fw['query_index']}",
+                        "Steps": fw["step_count"], "Scripts": fw["script_exec_count"],
+                        "Errors": fw["error_count"], "Time (s)": fw["time_sec"],
+                        "Error Types": ", ".join(set(fw.get("error_types", [])))[:60],
+                    })
+                st.dataframe(pd.DataFrame(_fw_rows), use_container_width=True, hide_index=True)
+
+            # Script Size
+            st.markdown("##### Script Size by Outcome")
+            _sb_rows = []
+            for _lbl, _key in [("Golden", "golden"), ("Clean Pass", "clean_pass"), ("Recovery", "recovery"), ("Failed", "failed"), ("All", "all")]:
+                _sb = _script_bloat.get(_key, {})
+                if _sb.get("count", 0) > 0:
+                    _sb_rows.append({
+                        "Category": _lbl, "Scripts": _sb["count"],
+                        "Avg Chars": _sb["avg"], "Median": _sb["median"],
+                        "Max": _sb["max"], "Total Chars": f"{_sb['total_chars']:,}",
+                    })
+            if _sb_rows:
+                st.dataframe(pd.DataFrame(_sb_rows), use_container_width=True, hide_index=True)
+            if _oversized:
+                _os_rows = []
+                for o in _oversized:
+                    _os_rows.append({
+                        "Batch": o["batch"], "Query": f"Q{o['query_index']}",
+                        "Step": o["step_index"], "Size": f"{o['script_len']:,}",
+                        "Passed": "Yes" if o["passed"] else "No",
+                    })
+                st.markdown(f"**{len(_oversized)} oversized scripts (>3000 chars)**")
+                st.dataframe(pd.DataFrame(_os_rows), use_container_width=True, hide_index=True)
+
+            # Thinking tokens
+            st.markdown("##### Thinking Tokens by Outcome")
+            _th_rows = []
+            for _lbl, _key in [("Golden", "golden"), ("Clean Pass", "clean_pass"), ("Recovery", "recovery"), ("Failed", "failed")]:
+                _th = _thoughts_oh.get(_key, {})
+                if _th.get("avg_chars", 0) > 0 or _th.get("total_chars", 0) > 0:
+                    _th_rows.append({
+                        "Category": _lbl,
+                        "Avg Chars / Case": f"{_th.get('avg_chars', 0):,}",
+                        "Avg Segments": _th.get("avg_segments", 0),
+                        "Total Chars": f"{_th.get('total_chars', 0):,}",
+                    })
+            if _th_rows:
+                st.dataframe(pd.DataFrame(_th_rows), use_container_width=True, hide_index=True)
+
+            # Early failure prediction
+            _ee_total = _early_fail.get("early_error_total", 0)
+            if _ee_total > 0:
+                _ee_rate = _early_fail.get("early_error_fail_rate", 0)
+                st.markdown(
+                    f"##### Early Failure Signal\n\n"
+                    f"**{_ee_total}** cases had errors in first 3 steps → "
+                    f"**{_early_fail.get('early_error_failed', 0)}** failed ({_ee_rate}%), "
+                    f"**{_early_fail.get('early_error_passed', 0)}** recovered"
+                )
+            _doomed_data = _early_fail.get("doomed_trajectories", [])
+            if _doomed_data:
+                st.markdown(f"**Doomed trajectories** (15+ steps then fail): {len(_doomed_data)} cases, "
+                            f"{_early_fail.get('doomed_total_steps', 0)} steps, {_early_fail.get('doomed_total_time', 0)}s")
+                _dm_rows = []
+                for d in _doomed_data:
+                    _dm_rows.append({
+                        "Batch": d["batch"], "Query": f"Q{d['query_index']}",
+                        "Steps": d["step_count"], "Scripts": d["script_exec_count"],
+                        "Errors": d["error_count"], "Time (s)": d["time_sec"],
+                        "1st Error": d.get("first_error_step", "—"),
+                    })
+                st.dataframe(pd.DataFrame(_dm_rows), use_container_width=True, hide_index=True)
+
+            # Round-trip analysis
+            st.markdown("##### Round-Trip Analysis")
+            _rt_rows = []
+            for _lbl, _avg_k in [("Golden", "golden_avg"), ("Clean Pass", "clean_avg"), ("Recovery", "recovery_avg"), ("Failed", "failed_avg")]:
+                _rt_rows.append({"Category": _lbl, "Avg Scripts / Query": _round_trips.get(_avg_k, 0)})
+            st.dataframe(pd.DataFrame(_rt_rows), use_container_width=True, hide_index=True)
+            _high_script = _round_trips.get("high_script_cases", [])
+            if _high_script:
+                st.markdown(f"**{len(_high_script)} passed cases used 6+ scripts** (consolidation candidates)")
+                _hs_rows = []
+                for h in _high_script:
+                    _hs_rows.append({
+                        "Batch": h["batch"], "Query": f"Q{h['query_index']}",
+                        "Scripts": h["scripts"], "Steps": h["steps"], "Errors": h["errors"],
+                    })
+                st.dataframe(pd.DataFrame(_hs_rows), use_container_width=True, hide_index=True)
+
+            # Console bloat
+            _con_total = _console_bl.get("total_console_chars", 0)
+            _con_cases = _console_bl.get("bloat_cases", [])
+            _con_count = _console_bl.get("bloat_case_count", 0)
+            if _con_total > 0:
+                st.markdown(f"##### Console Output\n\n**{_con_total:,}** total chars, "
+                            f"**{_con_count}** bloated cases (>500 chars with >30% duplicates)")
+                if _con_cases:
+                    _cb_rows = []
+                    for cb in _con_cases:
+                        _worst = max(cb.get("bloat_steps", [{}]), key=lambda x: x.get("console_len", 0), default={})
+                        _cb_rows.append({
+                            "Batch": cb["batch"], "Query": f"Q{cb['query_index']}",
+                            "Console Chars": f"{cb['total_console_chars']:,}",
+                            "Worst Step": f"{_worst.get('console_len', 0):,} chars, {_worst.get('dup_ratio', 0)}% dup",
+                            "Passed": "Yes" if cb.get("passed") else "No",
+                        })
+                    st.dataframe(pd.DataFrame(_cb_rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("No cases found for cost & efficiency analysis.")
+
+
+# ===================================================================
+# PAGE: Outcome Insights (what the grader found -- evidence-based)
+# ===================================================================
+
+elif page == "Outcome Insights":
+
+    # --- Outcome Categories ---
+    st.markdown('<div class="section-strip">Outcome Categories (what went wrong with the output)</div>', unsafe_allow_html=True)
+
+    with st.popover("ℹ️ Category Definitions"):
+        for cat_name, cat_desc in OUTCOME_CATEGORIES.items():
+            st.markdown(f"**{cat_name}** — {cat_desc}")
+
+    outc_dist: dict[str, int] = {}
+    for cr in f_cls:
+        oc = cr.outcome_category or "Unclassified"
+        outc_dist[oc] = outc_dist.get(oc, 0) + 1
+    if outc_dist and not (len(outc_dist) == 1 and "Unclassified" in outc_dist):
+        OUTCOME_COLORS = ["#0891b2", "#0d9488", "#059669", "#2563eb", "#4f46e5", "#7c3aed", "#be185d", "#d97706"]
+        outc_items = sorted(outc_dist.items(), key=lambda x: -x[1])
+        outc_html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.8rem;margin-bottom:1.2rem">'
+        for idx, (ocat, ocount) in enumerate(outc_items):
+            opct = round(ocount / max(total_f, 1) * 100)
+            ocolor = OUTCOME_COLORS[idx % len(OUTCOME_COLORS)]
+            olabel = ocat[:50] + ("..." if len(ocat) > 50 else "")
+            outc_html += (
+                f'<div style="background:white;border:1px solid #e2e8f0;border-left:5px solid {ocolor};'
+                f'border-radius:10px;padding:1rem 1.2rem">'
+                f'<div style="font-size:0.72rem;font-weight:600;color:#64748b;text-transform:uppercase;'
+                f'letter-spacing:0.05em">{_h(olabel)}</div>'
+                f'<div style="font-size:1.8rem;font-weight:700;color:{ocolor};margin:0.2rem 0">{ocount}</div>'
+                f'<div style="font-size:0.78rem;color:#94a3b8">{opct}% of {total_f} failures</div>'
+                f'</div>'
+            )
+        outc_html += '</div>'
+        st.markdown(outc_html, unsafe_allow_html=True)
+
+        # Per-category drilldown with reasoning
+        ocr_map: dict[str, list] = {cat: [] for cat in outc_dist}
+        for cr in f_cls:
+            if cr.outcome_category in ocr_map:
+                ocr_map[cr.outcome_category].append(cr)
+        for ocat, crs in ocr_map.items():
+            if crs:
+                with st.expander(f"{ocat} ({len(crs)} failures)"):
+                    for cr in crs:
+                        st.markdown(f"**`{cr.batch}` Q{cr.query_index}**: \"{cr.query_text}\"")
+                        details = ""
+                        if cr.why:
+                            details += f"*Why:* {cr.why}\n\n"
+                        if cr.evidence:
+                            grader_ev = [e for e in cr.evidence if e.startswith("Grader says:")]
+                            if grader_ev:
+                                details += f"*Grader:* {grader_ev[0][13:]}"
+                        if details:
+                            st.markdown(
+                                f'<div style="max-height:180px;overflow-y:auto;font-size:0.85rem;'
+                                f'color:#475569;background:#f8fafc;border-radius:6px;padding:0.6rem 0.8rem;'
+                                f'margin:0.3rem 0 0.6rem 0">{details}</div>',
+                                unsafe_allow_html=True,
+                            )
+                        st.markdown("---")
+    else:
+        groq_key = os.environ.get("GROQ_API_KEY", "")
+        if not gemini_key and not groq_key:
+            st.info("Set GROQ_API_KEY or GEMINI_API_KEY to enable LLM-powered outcome classification.")
+
+    # --- Build taxonomy pass/fail data for insights ---
+    intent_pass: dict[str, dict] = {}
+    spec_pass: dict[str, dict] = {}
+    complexity_pass: dict[str, dict] = {}
+    for c in f_cases:
+        intent = _tag_value(c, "taxonomy.query.intent.primary") or "Unknown"
+        intent_pass.setdefault(intent, {"p": 0, "f": 0})
+        spec = _tag_value(c, "taxonomy.query.specificity") or "Unknown"
+        spec_pass.setdefault(spec, {"p": 0, "f": 0})
+        cplx = _tag_value(c, "taxonomy.query.intent.complexity") or "Unknown"
+        complexity_pass.setdefault(cplx, {"p": 0, "f": 0})
+        if c.passed:
+            intent_pass[intent]["p"] += 1
+            spec_pass[spec]["p"] += 1
+            complexity_pass[cplx]["p"] += 1
+        else:
+            intent_pass[intent]["f"] += 1
+            spec_pass[spec]["f"] += 1
+            complexity_pass[cplx]["f"] += 1
+
+    # --- What Works Well ---
+    st.markdown('<div class="section-strip">What Works Well</div>', unsafe_allow_html=True)
+
+    well_cards = []
+    for intent, stats in sorted(intent_pass.items(), key=lambda x: -(x[1]["p"] / max(x[1]["p"] + x[1]["f"], 1))):
+        total_i = stats["p"] + stats["f"]
+        if total_i < 3:
+            continue
+        pr = stats["p"] / total_i * 100
+        if pr >= 85:
+            passing_qs = [c for c in f_cases if c.passed and (_tag_value(c, "taxonomy.query.intent.primary") or "Unknown") == intent]
+            specs = Counter(_tag_value(c, "taxonomy.query.specificity") or "Unknown" for c in passing_qs)
+            top_spec = specs.most_common(1)[0][0] if specs else ""
+            spec_note = f"Mostly {top_spec.lower()} queries" if top_spec and top_spec != "Unknown" else ""
+            well_cards.append({"intent": intent, "pr": pr, "p": stats["p"], "t": total_i, "spec_note": spec_note})
+
+    for sp, st2 in sorted(spec_pass.items(), key=lambda x: -(x[1]["p"] / max(x[1]["p"] + x[1]["f"], 1))):
+        total_s = st2["p"] + st2["f"]
+        if total_s < 3 and sp != "Unknown":
+            continue
+        spr = st2["p"] / total_s * 100
+        if spr >= 90:
+            well_cards.append({"intent": f"Specificity: {sp}", "pr": spr, "p": st2["p"], "t": total_s, "spec_note": ""})
+
+    seen_intents = set()
+    if well_cards:
+        for wc in well_cards[:6]:
+            if wc["intent"] in seen_intents:
+                continue
+            seen_intents.add(wc["intent"])
+            detail = f' <span style="font-size:0.78rem;color:#166534;">({wc["spec_note"]})</span>' if wc["spec_note"] else ""
+            st.markdown(
+                f'<div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left:4px solid #22c55e;'
+                f'border-radius:8px;padding:0.8rem 1.1rem;margin-bottom:0.5rem">'
+                f'<div style="font-weight:600;color:#15803d">{_h(wc["intent"])}</div>'
+                f'<div style="font-size:0.85rem;color:#166534;margin-top:2px">'
+                f'{wc["pr"]:.0f}% pass rate ({wc["p"]}/{wc["t"]}){detail}</div>'
+                f'</div>', unsafe_allow_html=True)
+    else:
+        st.info("No strong success patterns detected.")
+
+    # --- What Works Poorly (with outcome + specificity mapping) ---
+    st.markdown('<div class="section-strip">What Works Poorly</div>', unsafe_allow_html=True)
+    poor_cards = []
+    for intent, stats in sorted(intent_pass.items(), key=lambda x: (x[1]["f"] / max(x[1]["p"] + x[1]["f"], 1)), reverse=True):
+        total_i = stats["p"] + stats["f"]
+        if total_i < 2:
+            continue
+        fr = stats["f"] / total_i * 100
+        if fr >= 30:
+            failed_in_intent = [cr for cr in f_cls if _tag_value(
+                case_lookup.get((cr.batch, cr.query_index)),
+                "taxonomy.query.intent.primary"
+            ) == intent]
+            outcome_counts = Counter(cr.outcome_category for cr in failed_in_intent)
+            top_outcomes = outcome_counts.most_common(2)
+            failed_cases_in_intent = [c for c in f_cases if not c.passed and (_tag_value(c, "taxonomy.query.intent.primary") or "Unknown") == intent]
+            specs = Counter(_tag_value(c, "taxonomy.query.specificity") or "Unknown" for c in failed_cases_in_intent)
+            top_spec = specs.most_common(1)[0] if specs else ("", 0)
+            example_qs = [cr.query_text[:90] for cr in failed_in_intent[:2]]
+            poor_cards.append({
+                "intent": intent, "fr": fr, "f": stats["f"], "t": total_i,
+                "top_outcomes": top_outcomes, "top_spec": top_spec, "examples": example_qs,
+            })
+
+    if poor_cards:
+        for pc in poor_cards[:5]:
+            outcomes_html = ""
+            for oname, ocount in pc["top_outcomes"]:
+                outcomes_html += f'<span style="background:#fef2f2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:0.75rem;margin-right:4px">{_h(oname)} ({ocount})</span>'
+            spec_html = ""
+            if pc["top_spec"][0] and pc["top_spec"][0] != "Unknown":
+                spec_html = f'<div style="font-size:0.78rem;color:#92400e;margin-top:3px">Mostly <b>{_h(pc["top_spec"][0])}</b> queries ({pc["top_spec"][1]}/{pc["f"]})</div>'
+            examples_html = ""
+            if pc["examples"]:
+                examples_html = '<div style="font-size:0.78rem;color:#666;margin-top:4px;border-top:1px solid #fecaca;padding-top:4px">'
+                for eq in pc["examples"]:
+                    examples_html += f'&bull; "{_h(eq)}"<br>'
+                examples_html += '</div>'
+            st.markdown(
+                f'<div style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border-left:4px solid #ef4444;'
+                f'border-radius:8px;padding:0.8rem 1.1rem;margin-bottom:0.5rem">'
+                f'<div style="font-weight:600;color:#991b1b">{_h(pc["intent"])}</div>'
+                f'<div style="font-size:0.85rem;color:#991b1b;margin-top:2px">'
+                f'{pc["fr"]:.0f}% fail rate ({pc["f"]}/{pc["t"]})</div>'
+                f'<div style="margin-top:4px">{outcomes_html}</div>'
+                f'{spec_html}{examples_html}'
+                f'</div>', unsafe_allow_html=True)
+    else:
+        st.info("No strong failure patterns detected.")
+
+    # --- Success vs Failure delta (computed from filtered cases) ---
+    _spec_pass = Counter(_tag_value(c, "taxonomy.query.specificity") for c in f_passed)
+    _spec_fail = Counter(_tag_value(c, "taxonomy.query.specificity") for c in f_failed)
+    _well_spec_pass = _spec_pass.get("Very Well-Specified", 0) + _spec_pass.get("Well-Specified", 0)
+    _ambig_fail = _spec_fail.get("Ambiguous", 0) + _spec_fail.get("Very Ambiguous", 0)
+    _avg_steps_pass = sum(c.step_count for c in f_passed) / max(len(f_passed), 1)
+    _avg_steps_fail = sum(c.step_count for c in f_failed) / max(len(f_failed), 1)
+    delta = [
+        {"axis": "Specificity",
+         "success_side": f"Well-specified dominate ({_well_spec_pass}/{len(f_passed)} successes)",
+         "failure_side": f"Ambiguous concentrate in failures ({_ambig_fail}/{len(f_failed)} failures)"},
+        {"axis": "Trajectory length",
+         "success_side": f"Avg {_avg_steps_pass:.0f} steps",
+         "failure_side": f"Avg {_avg_steps_fail:.0f} steps"},
+    ]
+    if delta:
+        st.markdown('<div class="section-strip">Success vs Failure Signals</div>', unsafe_allow_html=True)
+        for d in delta:
+            cs, cf = st.columns(2)
+            with cs:
+                st.markdown(f'<div class="insight-card good"><strong>{_h(d["axis"])}</strong><br>{_h(d["success_side"])}</div>', unsafe_allow_html=True)
+            with cf:
+                st.markdown(f'<div class="insight-card bad"><strong>{_h(d["axis"])}</strong><br>{_h(d["failure_side"])}</div>', unsafe_allow_html=True)
+
+    # --- Key Findings & Recommendations (computed from filtered cases) ---
+    deeper: list = []
+    _batch_fail_counts = Counter(c.batch for c in f_failed)
+    if _batch_fail_counts:
+        _top_batch, _top_count = _batch_fail_counts.most_common(1)[0]
+        if _top_count / max(len(f_failed), 1) >= 0.7:
+            deeper.append({"finding": f"Failures cluster heavily in {_top_batch} ({_top_count}/{len(f_failed)}).",
+                           "recommendation": f"Investigate {_top_batch} — the batch may have systematically harder queries or a data issue."})
+    _claim_fail = sum(1 for c in f_failed if c.has_success_claim)
+    if _claim_fail >= 3:
+        deeper.append({"finding": f"{_claim_fail}/{len(f_failed)} failures claim success — agent doesn't self-detect.",
+                       "recommendation": "The agent lacks self-evaluation. Consider adding confidence calibration or output verification steps."})
+    if deeper:
+        st.markdown('<div class="section-strip">Key Findings & Recommendations</div>', unsafe_allow_html=True)
+        for i, d in enumerate(deeper):
+            if isinstance(d, dict):
+                finding = d.get("finding", "")
+                rec = d.get("recommendation", "")
+            else:
+                finding = str(d)
+                rec = ""
+            st.markdown(
+                f'<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;'
+                f'padding:1rem 1.2rem;margin-bottom:0.7rem;box-shadow:0 1px 3px rgba(0,0,0,0.06)">'
+                f'<div style="display:flex;align-items:flex-start;gap:0.6rem">'
+                f'<div style="background:#fef3c7;color:#92400e;font-weight:700;border-radius:50%;'
+                f'min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;'
+                f'font-size:0.8rem">{i+1}</div>'
+                f'<div>'
+                f'<div style="font-size:0.88rem;font-weight:600;color:#1e293b;line-height:1.4">{_h(finding)}</div>'
+                + (f'<div style="font-size:0.82rem;color:#166534;background:#f0fdf4;border-radius:6px;'
+                   f'padding:0.4rem 0.7rem;margin-top:0.5rem">'
+                   f'<strong>Recommendation:</strong> {_h(rec)}</div>' if rec else '')
+                + f'</div></div></div>',
+                unsafe_allow_html=True,
+            )
+
+
+# ===================================================================
+# PAGE: Failure Analysis (trajectory-based, category drill-down)
+# ===================================================================
+
+elif page == "Failure Analysis":
+
+    # --- Trajectory taxonomy reference ---
+    st.markdown('<div class="section-strip">Trajectory Categories (where in the agent process it went wrong)</div>', unsafe_allow_html=True)
+
+    with st.popover("ℹ️ Category Definitions"):
+        for cat_name, cat_desc in TRAJECTORY_CATEGORIES.items():
+            st.markdown(f"**{cat_name}** — {cat_desc}")
+
+    # --- View toggle ---
+    view_mode = st.radio("View by", ["Category", "Batch"], horizontal=True)
+
+    # --- Category cards ---
+    cat_dist: dict[str, int] = {}
+    for cr in f_cls:
+        for tc in (cr.trajectory_categories or [cr.primary_category]):
+            cat_dist[tc] = cat_dist.get(tc, 0) + 1
+    if cat_dist:
+        cats = sorted(cat_dist.items(), key=lambda x: x[1], reverse=True)
+
+        cat_html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.8rem;margin-bottom:1.2rem">'
+        for cat_name, count in cats:
+            pct = round(count / max(total_f, 1) * 100)
+            color = _cat_color(cat_name)
+            cat_html += (
+                f'<div style="background:white;border:1px solid #e2e8f0;border-left:5px solid {color};'
+                f'border-radius:10px;padding:1rem 1.2rem">'
+                f'<div style="font-size:0.72rem;font-weight:600;color:#64748b;text-transform:uppercase;'
+                f'letter-spacing:0.05em">{_h(cat_name)}</div>'
+                f'<div style="font-size:1.8rem;font-weight:700;color:{color};margin:0.2rem 0">{count}</div>'
+                f'<div style="font-size:0.78rem;color:#94a3b8">{pct}% of {total_f} failures</div>'
+                f'</div>'
+            )
+        cat_html += '</div>'
+        st.markdown(cat_html, unsafe_allow_html=True)
+
+    if not f_cls:
+        st.success("No failures to analyze.")
+    elif view_mode == "Category":
+        # --- Category drill-down (multi-bucket: a query can appear in multiple categories) ---
+        for cat_name, count in cats:
+            cat_cases = [cr for cr in f_cls
+                         if cat_name in (cr.trajectory_categories or [cr.primary_category])]
+            if not cat_cases:
+                continue
+            color = _cat_color(cat_name)
+
+            # Category explanation from dynamic classification results
+            rep = cat_cases[0] if cat_cases else None
+
+            with st.expander(f"{cat_name} -- {count} failures"):
+                # LLM-generated category-level fix (skip for Unclassified — no common pattern)
+                if cat_name != "Unclassified":
+                    cat_fix = fc.generate_category_fix(cat_name, cat_cases, f_cases)
+                    if cat_fix:
+                        st.markdown(
+                            f'<div style="font-size:0.82rem;color:#065f46;background:#ecfdf5;'
+                            f'border:1px solid #6ee7b7;border-left:4px solid #059669;border-radius:6px;'
+                            f'padding:0.5rem 0.7rem;margin-bottom:0.8rem">'
+                            f'<strong>Recommended fix:</strong> {_h(cat_fix)}</div>',
+                            unsafe_allow_html=True,
+                        )
+                for cr in sorted(cat_cases, key=lambda c: (c.batch, int(c.query_index))):
+                    with st.expander(f"`{cr.batch}` Q{cr.query_index}: \"{cr.query_text[:80]}\""):
+                        _render_failure_card(cr, show_trajectory=True)
+
+    else:
+        # --- Batch-grouped view ---
+        by_batch = {}
+        for cr in sorted(f_cls, key=lambda c: (c.batch, int(c.query_index))):
+            by_batch.setdefault(cr.batch, []).append(cr)
+
+        for batch_name in sorted(by_batch.keys()):
+            batch_cls = by_batch[batch_name]
+            batch_all = [c for c in f_cases if c.batch == batch_name]
+            batch_total = len(batch_all)
+            batch_failed = sum(1 for c in batch_all if not c.passed)
+            batch_pr = round((batch_total - batch_failed) / max(batch_total, 1) * 100, 1)
+
+            st.markdown(
+                f'<div style="background:linear-gradient(90deg,#1e293b,#334155);color:white;'
+                f'padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;font-size:0.92rem;'
+                f'margin:1.2rem 0 0.6rem 0;display:flex;justify-content:space-between;align-items:center">'
+                f'<span>{_h(batch_name)}</span>'
+                f'<span style="font-weight:400;font-size:0.82rem">'
+                f'{len(batch_cls)} failures / {batch_total} queries -- {batch_pr}% pass</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            for cr in batch_cls:
+                preview = cr.query_text[:80] + ("..." if len(cr.query_text) > 80 else "")
+                with st.expander(f"Q{cr.query_index} -- \"{preview}\""):
+                    _render_failure_card(cr, show_trajectory=True)
+
+
+
+
+# ===================================================================
+# PAGE: Success Analysis
+# ===================================================================
+
+elif page == "Success Analysis":
+
+    # Build recovery classification lookup
+    recovery_cls_lookup: dict[tuple, object] = {}
+    if recovery_classifications:
+        for rc in recovery_classifications:
+            if rc.batch in sel_batches:
+                recovery_cls_lookup[(rc.batch, rc.query_index)] = rc
+
+    # --- Summary metrics ---
+    st.markdown('<div class="section-strip">Success Summary</div>', unsafe_allow_html=True)
+    recovery_cases = [c for c in f_passed if c.error_count > 0]
+    clean_cases = [c for c in f_passed if c.error_count == 0]
+    golden = [c for c in f_passed if c.error_count == 0 and c.step_count < 8]
+    recovery_rate = len(recovery_cases) / max(len(f_passed), 1) * 100
+    avg_steps_p = sum(c.step_count for c in f_passed) / max(len(f_passed), 1)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total Passed", len(f_passed))
+    c2.metric("Recovery Rate", f"{recovery_rate:.1f}%")
+    c3.metric("Avg Steps", f"{avg_steps_p:.1f}")
+    c4.metric("Golden Trajectories", len(golden))
+
+    st.markdown(
+        f'{len(f_passed)} of {total_q} queries passed ({pass_rate:.1f}%). '
+        f'**{len(recovery_cases)}** recovered from script errors. '
+        f'**{len(golden)}** were golden trajectories (zero errors, under 8 steps).',
+    )
+    with st.popover("ℹ️"):
+        st.markdown(
+            "**Recovery Rate** = % of passed cases that encountered at least one script error "
+            "but still produced the correct answer. "
+            "**Golden Trajectories** = cleanest passes: zero errors AND under 8 trajectory steps."
+        )
+
+    # --- Recovery analysis ---
+    st.markdown('<div class="section-strip">Recovery Analysis -- Cases That Hit Errors But Still Passed</div>', unsafe_allow_html=True)
+    if recovery_cases:
+        st.markdown(
+            f'{len(recovery_cases)} of {len(f_passed)} passed cases ({recovery_rate:.1f}%) '
+            f'encountered at least one script error during execution but still produced correct results. '
+            f'This demonstrates the agent\'s ability to recognize errors and adapt its approach.',
+        )
+
+        avg_steps_clean = sum(c.step_count for c in clean_cases) / max(len(clean_cases), 1)
+        avg_steps_rec = sum(c.step_count for c in recovery_cases) / max(len(recovery_cases), 1)
+        avg_time_clean = sum(c.execution_time_sec for c in clean_cases) / max(len(clean_cases), 1)
+        avg_time_rec = sum(c.execution_time_sec for c in recovery_cases) / max(len(recovery_cases), 1)
+        avg_scripts_clean = sum(c.script_exec_count for c in clean_cases) / max(len(clean_cases), 1)
+        avg_scripts_rec = sum(c.script_exec_count for c in recovery_cases) / max(len(recovery_cases), 1)
+        avg_errors_rec = sum(c.error_count for c in recovery_cases) / max(len(recovery_cases), 1)
+
+        cmp_rows = [
+            {
+                "Group": "Clean passes (no errors)",
+                "Count": len(clean_cases),
+                "Avg Steps": f"{avg_steps_clean:.1f}",
+                "Avg Scripts": f"{avg_scripts_clean:.1f}",
+                "Avg Errors": "0",
+                "Avg Time (s)": f"{avg_time_clean:.1f}",
+            },
+            {
+                "Group": "Recovery passes (had errors)",
+                "Count": len(recovery_cases),
+                "Avg Steps": f"{avg_steps_rec:.1f}",
+                "Avg Scripts": f"{avg_scripts_rec:.1f}",
+                "Avg Errors": f"{avg_errors_rec:.1f}",
+                "Avg Time (s)": f"{avg_time_rec:.1f}",
+            },
+        ]
+        st.dataframe(pd.DataFrame(cmp_rows), hide_index=True)
+        with st.popover("ℹ️"):
+            st.markdown(
+                "Recovery passes take more steps, more script executions, and more time than clean passes -- "
+                "this is the cost of self-correction. The agent retries with different approaches after hitting errors."
+            )
+
+        rec_error_counter = Counter()
+        rec_error_cases: dict[str, list] = {}
+        for c in recovery_cases:
+            for et in c.error_types:
+                rec_error_counter[et] += 1
+                rec_error_cases.setdefault(et, []).append(c)
+        if rec_error_counter:
+            st.markdown("**Error types the agent recovered from:**")
+            et_rows = [{"Error Type": et, "Recovered Count": cnt} for et, cnt in rec_error_counter.most_common()]
+            st.dataframe(pd.DataFrame(et_rows), hide_index=True)
+            with st.expander("Show queries per recovered error type"):
+                for et, cases_list in rec_error_cases.items():
+                    st.markdown(f"**{et}** ({len(cases_list)} cases)")
+                    for c in cases_list:
+                        st.markdown(f"- `{c.batch}` Q{c.query_index}: \"{c.query_text[:100]}\"")
+    else:
+        st.info("All passed cases completed without any script errors.")
+
+    # --- Success by Intent + Specificity ---
+    st.markdown('<div class="section-strip">Success by Intent &amp; Specificity</div>', unsafe_allow_html=True)
+    with st.popover("ℹ️"):
+        st.markdown(
+            "Passed queries grouped by **intent** (what the query asks the agent to do) and "
+            "**specificity** (how precisely the query describes the task). "
+            "This reveals which types of requests the agent handles reliably."
+        )
+
+    intent_groups: dict[str, list] = {}
+    for c in f_passed:
+        intent = _tag_value(c, "taxonomy.query.intent.primary") or "Unknown"
+        intent_groups.setdefault(intent, []).append(c)
+
+    intent_sorted = sorted(intent_groups.items(), key=lambda x: -len(x[1]))
+    cols = st.columns(min(len(intent_sorted), 4))
+    for i, (intent_name, cases) in enumerate(intent_sorted):
+        n = len(cases)
+        pct = round(n / max(len(f_passed), 1) * 100)
+        spec_counts = Counter(_tag_value(c, "taxonomy.query.specificity") or "Unknown" for c in cases)
+        spec_line = " &middot; ".join(f"{s}: {cnt}" for s, cnt in spec_counts.most_common())
+        avg_steps = sum(c.step_count for c in cases) / max(n, 1)
+        avg_time = sum(c.execution_time_sec for c in cases) / max(n, 1)
+        with_errors = sum(1 for c in cases if c.error_count > 0)
+        err_pct = round(with_errors / max(n, 1) * 100)
+        total_errors = sum(c.error_count for c in cases)
+        error_types_all = Counter()
+        for c in cases:
+            for et in c.error_types:
+                error_types_all[et] += 1
+        facts_line = f'Avg steps: {avg_steps:.1f} &middot; Avg time: {avg_time:.1f}s'
+        recovery_line = ""
+        if with_errors:
+            recovery_line = (f'<div style="font-size:0.78rem;margin-top:3px;color:#b45309;">'
+                            f'{with_errors}/{n} hit errors ({total_errors} total) &middot; '
+                            f'Error types: {", ".join(f"{et} ({cnt})" for et, cnt in error_types_all.most_common(3))}'
+                            f'</div>')
+        cols[i % len(cols)].markdown(
+            f'<div style="background:#f0fdf4;border-left:5px solid #16a34a;'
+            f'padding:14px;border-radius:8px;margin-bottom:8px;">'
+            f'<div style="font-weight:700;font-size:1rem;color:#16a34a">{_h(intent_name)}</div>'
+            f'<div style="font-size:0.9rem;color:#555;margin-top:4px;">{n} passes ({pct}%)</div>'
+            f'<div style="font-size:0.82rem;margin-top:4px;color:#666;">{spec_line}</div>'
+            f'<div style="font-size:0.82rem;margin-top:4px;color:#666;">{facts_line}</div>'
+            + recovery_line
+            + f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    for intent_name, cases in intent_sorted:
+        with st.expander(f"Show queries: {intent_name} ({len(cases)})"):
+            for c in sorted(cases, key=lambda x: (x.batch, x.query_index)):
+                spec = _tag_value(c, "taxonomy.query.specificity") or ""
+                err_badge = f" | {c.error_count} errors recovered" if c.error_count > 0 else ""
+                spec_badge = f" [{spec}]" if spec else ""
+                st.markdown(
+                    f"- `{c.batch}` Q{c.query_index}: \"{_h(c.query_text[:120])}\""
+                    f"{spec_badge} -- {c.step_count} steps, {c.execution_time_sec:.1f}s{err_badge}"
+                )
+
+    # --- Relative step comparison: pass vs fail per intent ---
+    st.markdown('<div class="section-strip">Pass vs Fail Comparison by Intent</div>', unsafe_allow_html=True)
+    with st.popover("ℹ️"):
+        st.markdown(
+            "Compares average steps, errors, and execution time between passed and failed queries "
+            "for each intent type. Large gaps suggest the agent struggles with certain query types "
+            "not just because they are harder, but because it takes inefficient paths."
+        )
+
+    intent_all: dict[str, dict] = {}
+    for c in f_cases:
+        intent = _tag_value(c, "taxonomy.query.intent.primary") or "Unknown"
+        bucket = intent_all.setdefault(intent, {"passed": [], "failed": []})
+        bucket["passed" if c.passed else "failed"].append(c)
+
+    cmp_rows = []
+    for intent_name, buckets in sorted(intent_all.items(), key=lambda x: -(len(x[1]["passed"]) + len(x[1]["failed"]))):
+        p_cases = buckets["passed"]
+        fl_cases = buckets["failed"]
+        if not p_cases and not fl_cases:
+            continue
+        p_n = len(p_cases)
+        f_n = len(fl_cases)
+        total_n = p_n + f_n
+        pass_r = round(p_n / max(total_n, 1) * 100)
+        avg_steps_p = sum(c.step_count for c in p_cases) / max(p_n, 1) if p_cases else 0
+        avg_steps_f = sum(c.step_count for c in fl_cases) / max(f_n, 1) if fl_cases else 0
+        avg_time_p = sum(c.execution_time_sec for c in p_cases) / max(p_n, 1) if p_cases else 0
+        avg_time_f = sum(c.execution_time_sec for c in fl_cases) / max(f_n, 1) if fl_cases else 0
+        cmp_rows.append({
+            "Intent": intent_name,
+            "Total": total_n,
+            "Pass Rate": f"{pass_r}%",
+            "Passed Avg Steps": f"{avg_steps_p:.1f}" if p_cases else "—",
+            "Failed Avg Steps": f"{avg_steps_f:.1f}" if fl_cases else "—",
+            "Step Delta": f"+{avg_steps_f - avg_steps_p:.1f}" if p_cases and fl_cases else "—",
+            "Passed Avg Time": f"{avg_time_p:.1f}s" if p_cases else "—",
+            "Failed Avg Time": f"{avg_time_f:.1f}s" if fl_cases else "—",
+        })
+    if cmp_rows:
+        st.dataframe(pd.DataFrame(cmp_rows), hide_index=True)
+
+    # --- Recovery stories ---
+    st.markdown('<div class="section-strip">Recovery Stories -- Errors Overcome</div>', unsafe_allow_html=True)
+    with st.popover("ℹ️"):
+        st.markdown(
+            "These queries hit real script errors during execution but the agent adapted and "
+            "still produced the correct result. Each story shows what went wrong and how the "
+            "agent recovered — evidence that self-correction works."
+        )
+    if recovery_cases:
+        rec_sorted = sorted(recovery_cases, key=lambda c: -c.error_count)
+        show_rec = min(15, len(rec_sorted))
+        for c in rec_sorted[:show_rec]:
+            intent = _tag_value(c, "taxonomy.query.intent.primary") or ""
+            error_types_str = ", ".join(c.error_types) if c.error_types else "unknown error"
+            error_steps = [s for s in c.steps if s.step_type == "ScriptResponse" and s.error_type]
+            recovery_step = None
+            for idx, s in enumerate(c.steps):
+                if s.step_type == "ScriptResponse" and not s.error_type and idx > 0:
+                    prev_errors = [ps for ps in c.steps[:idx] if ps.step_type == "ScriptResponse" and ps.error_type]
+                    if prev_errors:
+                        recovery_step = s
+            recovery_note = ""
+            if recovery_step:
+                result_preview = recovery_step.result[:100] if recovery_step.result else "OK"
+                recovery_note = f'<div style="color:#16a34a;font-size:0.85rem;margin-top:4px;">Recovered at step {recovery_step.step_index}: {_h(result_preview)}</div>'
+
+            # LLM trajectory classification for this recovery case
+            rc = recovery_cls_lookup.get((c.batch, c.query_index))
+            traj_badges = ""
+            why_note = ""
+            if rc:
+                for tc in (rc.trajectory_categories or [rc.trajectory_category]):
+                    traj_badges += (f'<span style="background:#7c3aed;color:#fff;padding:2px 8px;'
+                                    f'border-radius:10px;font-size:0.72rem;margin-right:4px;">{_h(tc)}</span>')
+                if rc.why:
+                    why_note = f'<div style="font-size:0.82rem;color:#475569;font-style:italic;margin-top:4px;">{_h(rc.why)}</div>'
+
+            st.markdown(
+                f'<div style="background:#fffbeb;border-left:4px solid #f59e0b;'
+                f'padding:10px 14px;margin-bottom:6px;border-radius:6px;">'
+                f'<div style="display:flex;justify-content:space-between;flex-wrap:wrap;">'
+                f'<strong>{_h(c.batch)} Q{c.query_index}</strong>'
+                f'<span style="font-size:0.85rem;color:#666;">'
+                f'{c.step_count} steps &middot; {c.error_count} error{"s" if c.error_count > 1 else ""} recovered</span></div>'
+                f'<div style="color:#555;margin-top:4px;font-size:0.9rem;">'
+                f'{_h(c.query_text[:150])}</div>'
+                f'<div style="color:#b45309;font-size:0.85rem;margin-top:4px;">Errors hit: {_h(error_types_str)}</div>'
+                + recovery_note
+                + why_note
+                + (f'<div style="margin-top:4px;">{traj_badges}'
+                   + (f'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;'
+                      f'border-radius:10px;font-size:0.75rem;">{_h(intent)}</span>' if intent else '')
+                   + f'</div>' if traj_badges or intent else '')
+                + f'</div>',
+                unsafe_allow_html=True,
+            )
+        if len(recovery_cases) > show_rec:
+            st.info(f"Showing top {show_rec} of {len(recovery_cases)} recovery stories (sorted by error count).")
+    else:
+        st.info("All passed cases completed without errors — no recovery stories.")
+
+    # --- Golden trajectories (compact highlight) ---
+    st.markdown('<div class="section-strip">Golden Trajectories</div>', unsafe_allow_html=True)
+    with st.popover("ℹ️"):
+        st.markdown(
+            "Zero script errors, under 8 trajectory steps, correct result. "
+            "These represent the agent at its best — exemplars for ideal behavior."
+        )
+    if golden:
+        golden_sorted = sorted(golden, key=lambda c: (c.step_count, c.execution_time_sec))
+        show_count = min(10, len(golden_sorted))
+        g_rows = []
+        for c in golden_sorted[:show_count]:
+            intent = _tag_value(c, "taxonomy.query.intent.primary") or ""
+            spec = _tag_value(c, "taxonomy.query.specificity") or ""
+            g_rows.append({
+                "Query": f"{c.batch} Q{c.query_index}: {c.query_text[:80]}",
+                "Steps": c.step_count,
+                "Time": f"{c.execution_time_sec:.1f}s",
+                "Intent": intent,
+                "Specificity": spec,
+            })
+        st.dataframe(pd.DataFrame(g_rows), hide_index=True)
+        if len(golden) > show_count:
+            st.caption(f"Showing {show_count} of {len(golden)} golden trajectories.")
+    else:
+        st.info("No golden trajectories found (zero errors AND under 8 steps).")
+
+    # --- LLM-generated success insights ---
+    st.markdown('<div class="section-strip">Success Patterns (LLM Analysis)</div>', unsafe_allow_html=True)
+
+    @st.cache_data(ttl=600)
+    def _get_success_insights(_passed_summary: str) -> str:
+        resp, _ = fc._call_llm(_passed_summary, max_tokens=800)
+        return resp
+
+    if f_passed:
+        # Build a compact summary for LLM
+        intent_summary = Counter(_tag_value(c, "taxonomy.query.intent.primary") or "Unknown" for c in f_passed)
+        spec_summary = Counter(_tag_value(c, "taxonomy.query.specificity") or "Unknown" for c in f_passed)
+        avg_steps_clean = sum(c.step_count for c in clean_cases) / max(len(clean_cases), 1) if clean_cases else 0
+        avg_steps_recovery = sum(c.step_count for c in recovery_cases) / max(len(recovery_cases), 1) if recovery_cases else 0
+        avg_time_clean = sum(c.execution_time_sec for c in clean_cases) / max(len(clean_cases), 1) if clean_cases else 0
+        avg_time_recovery = sum(c.execution_time_sec for c in recovery_cases) / max(len(recovery_cases), 1) if recovery_cases else 0
+        error_types_recovery = Counter()
+        for c in recovery_cases:
+            for et in c.error_types:
+                error_types_recovery[et] += 1
+
+        sample_golden = []
+        for c in (golden or [])[:5]:
+            sample_golden.append(f"  Q{c.query_index}: \"{c.query_text[:100]}\" ({c.step_count} steps, {c.execution_time_sec:.1f}s)")
+
+        sample_recovery = []
+        for c in sorted(recovery_cases, key=lambda x: -x.error_count)[:5]:
+            sample_recovery.append(f"  Q{c.query_index}: \"{c.query_text[:100]}\" ({c.step_count} steps, {c.error_count} errors, types: {','.join(c.error_types)})")
+
+        success_prompt = f"""You are analyzing success patterns for an Excel Copilot AI agent eval.
+
+DATA:
+- {len(f_passed)} passed out of {len(f_cases)} total ({pass_rate:.1f}% pass rate)
+- Clean passes (no errors): {len(clean_cases)} — avg {avg_steps_clean:.1f} steps, {avg_time_clean:.1f}s
+- Recovery passes (had errors): {len(recovery_cases)} — avg {avg_steps_recovery:.1f} steps, {avg_time_recovery:.1f}s
+- Golden trajectories (0 errors, <8 steps): {len(golden)}
+- Intent distribution: {dict(intent_summary.most_common())}
+- Specificity distribution: {dict(spec_summary.most_common())}
+- Error types in recovery cases: {dict(error_types_recovery.most_common())}
+
+SAMPLE GOLDEN TRAJECTORIES:
+{chr(10).join(sample_golden) if sample_golden else "  None"}
+
+SAMPLE RECOVERY CASES (highest error count):
+{chr(10).join(sample_recovery) if sample_recovery else "  None"}
+
+YOUR TASK: Identify 3-5 specific, data-backed insights about what makes this agent succeed. For each insight:
+- State the pattern with specific numbers
+- Explain why it matters
+- Keep each insight to 1-2 sentences max
+
+Focus on: what query types succeed most, how recovery works, efficiency patterns, any surprising findings.
+Do NOT repeat obvious facts. Do NOT use generic statements. Every insight must reference specific data from above."""
+
+        insights_text = _get_success_insights(success_prompt)
+        if insights_text:
+            st.markdown(
+                f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;'
+                f'padding:1rem 1.2rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.6">'
+                f'{_h(insights_text)}</div>',
+                unsafe_allow_html=True,
+            )
+
+    # --- Individual success drilldown ---
+    st.markdown('<div class="section-strip">Success Detail -- Individual Drilldown</div>', unsafe_allow_html=True)
+    view_mode = st.radio("View by", ["Intent", "Batch"], horizontal=True, key="success_view")
+
+    def _render_success_card(c):
+        intent = _tag_value(c, "taxonomy.query.intent.primary") or ""
+        complexity = _tag_value(c, "taxonomy.query.intent.complexity") or ""
+        specificity = _tag_value(c, "taxonomy.query.specificity") or ""
+
+        st.markdown(f'<div class="query-box">{_h(c.query_text)}</div>', unsafe_allow_html=True)
+
+        badges = ""
+        # LLM trajectory category badges for recovery cases
+        rc = recovery_cls_lookup.get((c.batch, c.query_index))
+        if rc:
+            for tc in (rc.trajectory_categories or [rc.trajectory_category]):
+                badges += (f'<span style="background:#7c3aed;color:#fff;padding:2px 10px;'
+                           f'border-radius:12px;font-size:0.78rem;font-weight:600;margin-right:4px;">'
+                           f'{_h(tc)}</span>')
+        if c.error_count > 0:
+            badges += (f'<span style="background:#f59e0b;color:#fff;padding:2px 10px;'
+                       f'border-radius:12px;font-size:0.78rem;font-weight:600;">'
+                       f'Recovered from {c.error_count} error{"s" if c.error_count > 1 else ""}</span> ')
+        if c.error_count == 0 and c.step_count < 8:
+            badges += (f'<span style="background:#16a34a;color:#fff;padding:2px 10px;'
+                       f'border-radius:12px;font-size:0.78rem;font-weight:600;">'
+                       f'Golden Trajectory</span> ')
+        if badges:
+            st.markdown(badges, unsafe_allow_html=True)
+
+        st.markdown(
+            f'<div class="traj-bar">'
+            f'<span><span class="traj-num">{c.step_count}</span> steps</span>'
+            f'<span title="Number of Office.js scripts sent to the Excel runtime for execution">'
+            f'<span class="traj-num">{c.script_exec_count}</span> script executions</span>'
+            f'<span><span class="traj-num">{c.error_count}</span> errors</span>'
+            f'<span><span class="traj-num">{c.execution_time_sec:.1f}s</span> execution</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Factual error details for recovery cases
+        if c.error_count > 0:
+            facts = []
+            # Consecutive script failures with step ranges
+            consecutive_errors = 0
+            loop_start = None
+            loops = []
+            for s in c.steps:
+                if s.step_type == "ScriptResponse" and s.error_type:
+                    if consecutive_errors == 0:
+                        loop_start = s.step_index
+                    consecutive_errors += 1
+                elif s.step_type == "ScriptResponse" and not s.error_type:
+                    if consecutive_errors >= 2:
+                        loops.append((loop_start, s.step_index - 1, consecutive_errors))
+                    consecutive_errors = 0
+                    loop_start = None
+                elif s.step_type == "ScriptExecution":
+                    pass
+            if consecutive_errors >= 2:
+                last_step = c.steps[-1].step_index if c.steps else 0
+                loops.append((loop_start, last_step, consecutive_errors))
+            if loops:
+                loop_parts = [f"steps {s}–{e} ({n} consecutive)" for s, e, n in loops]
+                facts.append(f"Consecutive failures: {'; '.join(loop_parts)}")
+
+            # Error types encountered
+            if c.error_types:
+                facts.append(f"Error types: {', '.join(c.error_types)}")
+
+            # Where recovery happened
+            for idx, s in enumerate(c.steps):
+                if s.step_type == "ScriptResponse" and not s.error_type and idx > 0:
+                    prev_errors = [ps for ps in c.steps[:idx] if ps.step_type == "ScriptResponse" and ps.error_type]
+                    if prev_errors:
+                        facts.append(f"First successful recovery at step {s.step_index}")
+                        break
+
+            if facts:
+                facts_html = " &middot; ".join(facts)
+                st.markdown(
+                    f'<div style="font-size:0.8rem;color:#b45309;margin-top:2px;">'
+                    f'{facts_html}</div>',
+                    unsafe_allow_html=True,
+                )
+
+        pills = ""
+        if complexity:
+            pills += (f'<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;'
+                      f'border-radius:10px;font-size:0.75rem;margin-right:4px;">{_h(complexity)}</span>')
+        if specificity:
+            pills += (f'<span style="background:#f3e8ff;color:#7c3aed;padding:2px 8px;'
+                      f'border-radius:10px;font-size:0.75rem;margin-right:4px;">{_h(specificity)}</span>')
+        if intent:
+            pills += (f'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;'
+                      f'border-radius:10px;font-size:0.75rem;">{_h(intent)}</span>')
+        if pills:
+            st.markdown(pills, unsafe_allow_html=True)
+
+        with st.expander("Show trajectory timeline"):
+            timeline = '<div class="step-timeline">'
+            for step in c.steps:
+                if step.step_type == "UserQuery":
+                    timeline += (
+                        f'<div class="step-item">'
+                        f'<strong>Step {step.step_index} -- Query:</strong> '
+                        f'"{_h(step.text[:100])}"</div>'
+                    )
+                elif step.step_type == "ScriptExecution":
+                    intent_desc = describe_script(step.script_full)
+                    timeline += (
+                        f'<div class="step-item script">'
+                        f'<strong>Step {step.step_index} -- Script:</strong> '
+                        f'{_h(intent_desc)} ({step.script_len} chars)</div>'
+                    )
+                elif step.step_type == "ScriptResponse":
+                    if step.error_type:
+                        timeline += (
+                            f'<div class="step-item error">'
+                            f'<strong>Step {step.step_index} -- ERROR (recovered):</strong> '
+                            f'{_h(step.error_type)}'
+                            + (f' -- {_h(step.console[:100])}' if step.console else '')
+                            + '</div>'
+                        )
+                    else:
+                        result_preview = step.result[:80] if step.result else "OK"
+                        timeline += (
+                            f'<div class="step-item">'
+                            f'<strong>Step {step.step_index} -- Response:</strong> '
+                            f'{_h(result_preview)}</div>'
+                        )
+                elif step.step_type == "Assistant":
+                    timeline += (
+                        f'<div class="step-item assistant">'
+                        f'<strong>Step {step.step_index} -- Agent:</strong> '
+                        f'"{_h(step.text[:120])}"</div>'
+                    )
+            timeline += '</div>'
+            st.markdown(timeline, unsafe_allow_html=True)
+
+    if view_mode == "Intent":
+        for intent_name, cases in intent_sorted:
+            if cases:
+                with st.expander(f"{intent_name} ({len(cases)} passes)"):
+                    for c in sorted(cases, key=lambda x: (x.batch, x.query_index)):
+                        st.markdown("---")
+                        st.markdown(f"**{c.batch} Q{c.query_index}**")
+                        _render_success_card(c)
+    else:
+        for bn in sorted(sel_batches):
+            bc = [c for c in f_passed if c.batch == bn]
+            if bc:
+                with st.expander(f"{bn} ({len(bc)} passed)"):
+                    for c in sorted(bc, key=lambda x: x.query_index):
+                        st.markdown("---")
+                        st.markdown(f"**{bn} Q{c.query_index}**")
+                        _render_success_card(c)
+
+
+# ===================================================================
+# PAGE: Every Failure (detailed cards, batch or category grouped)
+# ===================================================================
+
+elif page == "Every Failure":
+    if total_f == 0:
+        st.success("All queries passed!")
+    else:
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            search = st.text_input(
+                "Search", "", placeholder="Filter by query text, batch, or query number..."
+            )
+        with col2:
+            group_by = st.radio("Group by", ["Batch", "Trajectory", "Outcome"], horizontal=True)
+
+        display_cls = f_cls
+        if search:
+            sl = search.lower()
+            display_cls = [
+                c for c in f_cls
+                if sl in c.query_text.lower()
+                or search in c.query_index
+                or sl in c.batch.lower()
+                or sl in c.primary_category.lower()
+                or sl in (c.outcome_category or "").lower()
+            ]
+
+        st.caption(f"{len(display_cls)} failures")
+
+        if group_by == "Batch":
+            by_group = {}
+            for cr in sorted(display_cls, key=lambda c: (c.batch, int(c.query_index))):
+                by_group.setdefault(cr.batch, []).append(cr)
+
+            for group_name in sorted(by_group.keys()):
+                group_cls = by_group[group_name]
+                batch_all = [c for c in f_cases if c.batch == group_name]
+                batch_total = len(batch_all)
+                batch_pr = round((batch_total - len(group_cls)) / max(batch_total, 1) * 100, 1)
+
+                st.markdown(
+                    f'<div style="background:linear-gradient(90deg,#1e293b,#334155);color:white;'
+                    f'padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;font-size:0.92rem;'
+                    f'margin:1.2rem 0 0.6rem 0;display:flex;justify-content:space-between">'
+                    f'<span>{_h(group_name)}</span>'
+                    f'<span style="font-weight:400;font-size:0.82rem">'
+                    f'{len(group_cls)} failures / {batch_total} queries -- {batch_pr}% pass</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                for cr in group_cls:
+                    preview = cr.query_text[:80] + ("..." if len(cr.query_text) > 80 else "")
+                    with st.expander(f"Q{cr.query_index} -- \"{preview}\""):
+                        _render_failure_card(cr, show_trajectory=True)
+
+        elif group_by == "Trajectory":
+            by_group = {}
+            for cr in sorted(display_cls, key=lambda c: (c.primary_category, c.batch, int(c.query_index))):
+                cats = cr.trajectory_categories if cr.trajectory_categories else [cr.primary_category]
+                for cat in cats:
+                    by_group.setdefault(cat, []).append(cr)
+
+            for cat_name in sorted(by_group.keys()):
+                group_cls = by_group[cat_name]
+                color = _cat_color(cat_name)
+
+                st.markdown(
+                    f'<div style="background:linear-gradient(90deg,#1e293b,#334155);color:white;'
+                    f'padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;font-size:0.92rem;'
+                    f'margin:1.2rem 0 0.6rem 0;display:flex;justify-content:space-between">'
+                    f'<span style="border-left:4px solid {color};padding-left:0.6rem">{_h(cat_name)}</span>'
+                    f'<span style="font-weight:400;font-size:0.82rem">'
+                    f'{len(group_cls)} failures</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                for cr in group_cls:
+                    preview = cr.query_text[:80] + ("..." if len(cr.query_text) > 80 else "")
+                    with st.expander(f"Q{cr.query_index} [{cr.batch}] -- \"{preview}\""):
+                        _render_failure_card(cr, show_trajectory=True)
+
+        else:
+            by_group = {}
+            for cr in sorted(display_cls, key=lambda c: (c.outcome_category or "", c.batch, int(c.query_index))):
+                by_group.setdefault(cr.outcome_category or "Unknown", []).append(cr)
+
+            for ocat in sorted(by_group.keys()):
+                group_cls = by_group[ocat]
+                olabel = ocat[:60] + ("..." if len(ocat) > 60 else "")
+
+                st.markdown(
+                    f'<div style="background:linear-gradient(90deg,#0891b2,#0d9488);color:white;'
+                    f'padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;font-size:0.92rem;'
+                    f'margin:1.2rem 0 0.6rem 0;display:flex;justify-content:space-between">'
+                    f'<span>{_h(olabel)}</span>'
+                    f'<span style="font-weight:400;font-size:0.82rem">'
+                    f'{len(group_cls)} failures</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                for cr in group_cls:
+                    preview = cr.query_text[:80] + ("..." if len(cr.query_text) > 80 else "")
+                    with st.expander(f"Q{cr.query_index} [{cr.batch}] -- \"{preview}\""):
+                        _render_failure_card(cr, show_trajectory=True)
+
+
+# ---------------------------------------------------------------------------
+# Footer
+# ---------------------------------------------------------------------------
+st.markdown("---")
+st.caption("Eval Insights Platform -- evidence-based trajectory analysis")

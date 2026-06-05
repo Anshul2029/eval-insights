@@ -1,0 +1,47 @@
+{
+  "trace_id": "fail_sequence_invalid",
+  "dataset_file": "sales_q1.csv",
+  "user_prompt": "Produce KPIs, detect anomalies, then write report.",
+  "agent_plan": "Compute KPIs and hand off to Word.",
+  "dataset_variant": "with_anomaly",
+  "source_data_summary": {
+    "ground_truth_anomalies": {
+      "planted": "Product_E in June had a spike"
+    }
+  },
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "computation",
+      "what_agent_did": "Tried to compute KPIs before parsing.",
+      "output": "Computation ran but used default empty dataframe.",
+      "key_facts_produced": [
+        "computed_on_empty: true"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "what_agent_did": "Now parsed the CSV after computation.",
+      "output": "Parsed 100 rows.",
+      "key_facts_produced": [
+        "row_count: 100"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Word",
+      "action_type": "context_handoff",
+      "what_agent_did": "Created report from invalid computations.",
+      "output": "Report produced but results invalid.",
+      "key_facts_produced": [
+        "anomaly_included_in_report: false"
+      ]
+    }
+  ],
+  "word_output_actual_text": {
+    "body": "Report created, but KPIs appear incorrect."
+  }
+}

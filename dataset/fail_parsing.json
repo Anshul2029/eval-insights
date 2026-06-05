@@ -1,0 +1,44 @@
+{
+  "trace_id": "fail_parsing",
+  "dataset_file": "sales_q1_bad.csv",
+  "user_prompt": "Summarize KPIs and detect anomalies.",
+  "agent_plan": "Load CSV and compute KPIs.",
+  "dataset_variant": "with_anomaly",
+  "source_data_summary": {
+    "ground_truth_anomalies": {
+      "planted": "Product_C in April had a spike"
+    }
+  },
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "what_agent_did": "Attempted to load CSV but columns mismatched.",
+      "output": "Error: expected column 'Revenue' not found.",
+      "key_facts_produced": [
+        "missing_columns: Revenue",
+        "null_values_detected: true"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "what_agent_did": "Skipped computation due to parsing error.",
+      "output": "No computation performed.",
+      "key_facts_produced": []
+    },
+    {
+      "step_number": 3,
+      "app": "Word",
+      "action_type": "context_handoff",
+      "what_agent_did": "Created an empty report shell.",
+      "output": "Report draft missing KPIs.",
+      "key_facts_produced": []
+    }
+  ],
+  "word_output_actual_text": {
+    "body": "Report could not be generated due to missing data."
+  }
+}

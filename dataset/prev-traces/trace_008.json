@@ -1,0 +1,154 @@
+{
+  "trace_id": "trace_008",
+  "run_date": "2026-04-25",
+  "dataset_file": "02_single_anomaly_subtle.xlsx",
+  "dataset_variant": "single_anomaly_subtle_missed_step2",
+  "user_prompt": "Analyse this sales data and create a Word report for leadership",
+
+  "source_data_summary": {
+    "rows": 216,
+    "columns": ["Month", "Region", "Product", "Revenue", "Units_Sold"],
+    "months": 12,
+    "regions": ["North", "South", "West"],
+    "products": ["Product_A", "Product_B", "Product_C", "Product_D", "Product_E", "Product_F"],
+    "ground_truth_anomalies": {
+      "planted": "South/Product_B March: Revenue dropped from 37,655 (Feb) to 22,216 (Mar) — 41% decline. This is the intentionally injected anomaly.",
+      "organic": "South/Product_E Aug: Revenue 20,000 (organic outlier also present in baseline)"
+    }
+  },
+
+  "agent_plan": "Will load the Excel file, compute summary statistics and totals, create some charts, and write a Word report summarising performance for leadership.",
+
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 4 seconds",
+      "what_agent_did": "Loaded 02_single_anomaly_subtle.xlsx via pandas.read_excel. Confirmed 5 columns present. Checked for missing values — none found. Applied basic month ordering.",
+      "tools_called": ["pandas.read_excel", "df.isna().sum()"],
+      "output": "216 rows × 5 columns loaded. All expected columns present. 0 missing values. Month ordering applied.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns_validated: [Month, Region, Product, Revenue, Units_Sold]",
+        "missing_values: 0",
+        "month_ordering_applied: true"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 7 seconds",
+      "what_agent_did": "Computed total revenue 8,330,077 and total units 33,157. Computed regional revenue aggregates — North leads at 35.4%. Computed product revenue aggregates — Product_A leads at 20.1%. Computed monthly revenue totals and sorted to find best/worst months. Applied global z-score anomaly detection with threshold |z|>=3 on the Revenue column across all 216 rows — found 0 outliers above this threshold. Did not compute per-Region×Product series z-scores.",
+      "tools_called": [
+        "pandas groupby agg",
+        "global z-score on Revenue (mean/std across all rows)",
+        "sort_values for monthly extremes"
+      ],
+      "output": "Total revenue 8,330,077, total units 33,157. North leads regions (35.4%). Product_A leads products (20.1%). Best month Nov, worst month Mar. Global z-score outlier detection: 0 rows exceed |z|>=3 threshold — no significant anomalies detected in dataset.",
+      "key_facts_produced": [
+        "total_revenue: 8,330,077",
+        "total_units: 33,157",
+        "avg_price_per_unit: 251.23",
+        "regional_leader: North (35.4%)",
+        "regional_second: West (33.9%)",
+        "regional_trailing: South (30.6%)",
+        "product_leader: Product_A (20.1%)",
+        "best_month: Nov",
+        "worst_month: Mar (638,957)",
+        "anomaly_detection_method: global z-score on Revenue, threshold |z|>=3",
+        "outliers_detected_count: 0",
+        "planted_anomaly_caught: FALSE — South/Product_B Mar Revenue 22,216 has global z=-1.47, below |z|>=3 threshold",
+        "granularity_used: aggregate totals and regional/product sums only, no Region×Product×Month breakdown",
+        "note: per-series anomaly detection not performed — global threshold insufficient to flag subtle per-category drops"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel→Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 5 seconds",
+      "what_agent_did": "Generated 3 chart PNG files: chart_monthly_revenue.png, chart_region_revenue.png, chart_product_revenue.png. Passed all computed KPIs and aggregates into Word script context. No anomaly findings to pass because none were detected.",
+      "tools_called": [
+        "matplotlib.pyplot.savefig",
+        "python-docx Document"
+      ],
+      "output": "3 chart PNGs saved. Word document builder received: all KPI values, regional breakdowns, product breakdowns, monthly totals. No anomaly data passed (none computed).",
+      "key_facts_produced": [
+        "charts_generated: 3",
+        "all_kpis_passed: true",
+        "regional_data_passed: true",
+        "product_data_passed: true",
+        "anomaly_data_passed: false — no anomalies were detected in Step 2",
+        "context_loss_at_boundary: false — handoff was clean, all computed facts transferred"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 5 seconds",
+      "what_agent_did": "Created Word document with 5 sections: Executive Summary, Regional Performance (chart + table), Product Performance (chart + table), Monthly Trend (chart), Recommendations. No anomaly section created because Step 2 detected no anomalies.",
+      "tools_called": ["python-docx Document, add_heading, add_table, add_picture, add_paragraph"],
+      "output": "leadership_sales_report.docx created. 5 sections. No dedicated anomaly section. Charts embedded. Recommendations based on aggregate performance only.",
+      "key_facts_produced": [
+        "sections_count: 5",
+        "dedicated_anomaly_section_present: false",
+        "charts_embedded: 3",
+        "recommendations_count: 3",
+        "structure_order: exec_summary → regional → product → monthly_trend → recommendations"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 3 seconds",
+      "what_agent_did": "Wrote executive summary citing total revenue, regional leader North, product leader Product_A, best and worst months. Stated that the data looks consistent with no significant anomalies. Wrote regional and product sections with revenue share breakdowns. Wrote 3 recommendations focused on North region leadership and Product_A scale.",
+      "tools_called": ["python-docx paragraph and run formatting"],
+      "output": "Executive summary states data is consistent with no anomalies. Anomaly section absent. Recommendations focus on scaling strengths, not on investigating South/Product_B.",
+      "key_facts_produced": [
+        "exec_summary_text: Full-year revenue 8,330,077 across 33,157 units. North region leads at 35.4% share, followed by West (33.9%) and South (30.6%). Product_A leads product revenue at 20.1%. Best month was November; worst month was March. The dataset appears consistent with no significant statistical anomalies identified.",
+        "anomaly_narrative_text: Statistical analysis found no significant outliers in the dataset at the applied detection threshold. Revenue distribution appears broadly consistent across months and regions.",
+        "recommendation_1_text: Continue to invest in North region, which demonstrates the strongest revenue performance across months.",
+        "recommendation_2_text: Scale Product_A and Product_B focus as the two leading revenue contributors.",
+        "recommendation_3_text: Monitor the March trough and investigate seasonal drivers behind the year-low revenue month.",
+        "south_productB_explicitly_named_in_narrative: false",
+        "planted_anomaly_mentioned: false",
+        "false_clean_verdict_stated: true — narrative says 'no significant statistical anomalies identified' despite planted anomaly existing"
+      ]
+    }
+  ],
+
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue: 8,330,077",
+      "regional_leader: North (35.4%)",
+      "product_leader: Product_A (20.1%)",
+      "best_month: Nov",
+      "worst_month: Mar (638,957)"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT (exec summary)",
+      "regional_leader_North: PRESENT (exec summary + regional section)",
+      "product_leader_ProductA: PRESENT (product section)",
+      "best_month_Nov: PRESENT (exec summary)",
+      "worst_month_Mar: PRESENT (exec summary)"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel→Word (Step 3)",
+    "context_loss_detected": false,
+    "note": "No facts were lost at the handoff boundary — the handoff was technically clean. The root cause is that Step 2 never detected the planted anomaly (used global z-score threshold instead of per-Region×Product series analysis). The anomaly was absent from computation output, so Steps 3-5 never had it to pass forward. This is a Step 2 computation failure that propagates as inherited failures in Steps 4 and 5."
+  },
+
+  "word_output_actual_text": {
+    "executive_summary": "Full-year revenue 8,330,077 across 33,157 units. North region leads at 35.4% share, followed by West (33.9%) and South (30.6%). Product_A leads product revenue at 20.1%. Best month was November; worst month was March. The dataset appears consistent with no significant statistical anomalies identified.",
+    "anomaly_section": "Statistical analysis found no significant outliers in the dataset at the applied detection threshold. Revenue distribution appears broadly consistent across months and regions.",
+    "recommendations": [
+      "Continue to invest in North region, which demonstrates the strongest revenue performance across months.",
+      "Scale Product_A and Product_B focus as the two leading revenue contributors.",
+      "Monitor the March trough and investigate seasonal drivers behind the year-low revenue month."
+    ]
+  }
+}

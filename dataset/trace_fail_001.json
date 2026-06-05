@@ -1,0 +1,125 @@
+{
+  "trace_id": "trace_fail_001",
+  "run_date": "2026-04-28",
+  "dataset_file": "02_single_anomaly_subtle.xlsx",
+  "user_prompt": "Analyse this sales data and find any anomalies, create a Word report for leadership",
+  "source_data_summary": {
+    "rows": 216,
+    "columns": [
+      "Month",
+      "Region",
+      "Product",
+      "Revenue",
+      "Units_Sold"
+    ],
+    "ground_truth": "Planted anomaly: South/Product_B March Revenue dropped from 37,655 (Feb) to 22,216 (Mar) \u2014 41% decline. Agent must find this."
+  },
+  "agent_plan": "Load the file, compute total revenue and average, write a Word report.",
+  "steps": [
+    {
+      "step_number": 1,
+      "app": "Excel",
+      "action_type": "data_parsing",
+      "latency_observed": "approx 3 seconds",
+      "tools_called": [
+        "pandas.read_excel"
+      ],
+      "output": "216 rows loaded.",
+      "key_facts_produced": [
+        "row_count: 216",
+        "columns: [Month, Region, Product, Revenue, Units_Sold]"
+      ]
+    },
+    {
+      "step_number": 2,
+      "app": "Excel",
+      "action_type": "computation",
+      "latency_observed": "approx 2 seconds",
+      "tools_called": [
+        "df.Revenue.sum()",
+        "df.Revenue.mean()"
+      ],
+      "output": "Total revenue 8,330,077. Average revenue per row 38,565. No further analysis performed. No anomaly detection run.",
+      "key_facts_produced": [
+        "total_revenue: 8,330,077",
+        "avg_revenue: 38,565",
+        "anomaly_detection: NOT PERFORMED",
+        "regional_breakdown: NOT COMPUTED",
+        "product_breakdown: NOT COMPUTED",
+        "monthly_trend: NOT COMPUTED",
+        "granularity: aggregate only"
+      ]
+    },
+    {
+      "step_number": 3,
+      "app": "Excel\u2192Word",
+      "action_type": "context_handoff",
+      "latency_observed": "approx 3 seconds",
+      "tools_called": [
+        "python-docx Document"
+      ],
+      "output": "Only total_revenue and avg_revenue passed to Word. No charts. No anomaly data.",
+      "key_facts_produced": [
+        "total_revenue_passed: true",
+        "anomaly_data_passed: false",
+        "charts_generated: 0",
+        "context_loss_at_boundary: false"
+      ]
+    },
+    {
+      "step_number": 4,
+      "app": "Word",
+      "action_type": "report_structuring",
+      "latency_observed": "approx 2 seconds",
+      "tools_called": [
+        "python-docx Document, add_heading, add_paragraph"
+      ],
+      "output": "2-section Word document: Executive Summary, Recommendations. No regional section, no product section, no anomaly section, no charts.",
+      "key_facts_produced": [
+        "sections: 2",
+        "anomaly_section: NOT PRESENT",
+        "charts: none",
+        "regional_section: NOT PRESENT",
+        "product_section: NOT PRESENT"
+      ]
+    },
+    {
+      "step_number": 5,
+      "app": "Word",
+      "action_type": "narrative_generation",
+      "latency_observed": "approx 2 seconds",
+      "tools_called": [
+        "python-docx paragraph formatting"
+      ],
+      "output": "Narrative states total revenue is 8,330,077 and average per row is 38,565. States the business is performing well with no issues identified. Recommends continuing current strategy.",
+      "key_facts_produced": [
+        "exec_summary: Total revenue 8,330,077. Average revenue per record 38,565. Business is performing well with no significant issues identified.",
+        "anomaly_mentioned: false",
+        "south_productB_mentioned: false",
+        "false_clean_verdict: true",
+        "recommendation: Continue current strategy.",
+        "report_depth: insufficient"
+      ]
+    }
+  ],
+  "context_manifest": {
+    "facts_produced_in_excel_step2": [
+      "total_revenue: 8,330,077",
+      "avg_revenue: 38,565"
+    ],
+    "facts_present_in_word_output": [
+      "total_revenue: PRESENT",
+      "anomaly_South_ProductB: ABSENT \u2014 never computed"
+    ],
+    "facts_lost_at_boundary": [],
+    "boundary": "Excel\u2192Word (Step 3)",
+    "context_loss_detected": false
+  },
+  "word_output_actual_text": {
+    "executive_summary": "Total revenue 8,330,077. Average revenue per record 38,565. Business is performing well with no significant issues identified.",
+    "anomaly_section": "NOT PRESENT",
+    "recommendations": [
+      "Continue current strategy."
+    ]
+  }
+}
