@@ -756,6 +756,108 @@ def _render_success_card(c, recovery_cls_lookup=None):
         st.markdown(timeline, unsafe_allow_html=True)
 
 
+def _build_trajectory_html(case) -> str:
+    """Build a compact HTML trajectory timeline for inline table expansion."""
+    if not case:
+        return ""
+    dark = st.session_state.get("dark_mode", False)
+    muted = "#8b949e" if dark else "#64748b"
+    text_c = "#e6edf3" if dark else "#1e293b"
+    err_c = "#f85149" if dark else "#dc2626"
+    ok_border = "#28a745"
+    script_border = "#6c757d"
+    query_border = "#2563eb"
+
+    traj_bar_bg = "#0d1117" if dark else "#f8f9fa"
+    traj_bar_border = "#30363d" if dark else "#e2e8f0"
+
+    stats_bar = (
+        f'<div style="display:flex;gap:1.5rem;padding:0.5rem 0.8rem;margin-bottom:0.5rem;'
+        f'background:{traj_bar_bg};border:1px solid {traj_bar_border};border-radius:6px;font-size:0.82rem">'
+        f'<span><strong style="color:{text_c}">{case.step_count}</strong> <span style="color:{muted}">steps</span></span>'
+        f'<span><strong style="color:{err_c if case.error_count > 0 else text_c}">{case.error_count}</strong> <span style="color:{muted}">errors</span></span>'
+        f'<span><strong style="color:{text_c}">{case.script_exec_count}</strong> <span style="color:{muted}">scripts</span></span>'
+        f'<span><strong style="color:{text_c}">{case.execution_time_sec:.1f}s</strong> <span style="color:{muted}">time</span></span>'
+        f'</div>')
+
+    timeline = ""
+    for step in case.steps:
+        if step.step_type == "UserQuery":
+            timeline += (f'<div style="border-left:3px solid {query_border};padding:4px 10px;margin:3px 0;'
+                         f'font-size:0.78rem;color:{muted}"><strong>Step {step.step_index} — Query:</strong> '
+                         f'"{_h(step.text)}"</div>')
+        elif step.step_type == "ScriptExecution":
+            intent_desc = describe_script(step.script_full)
+            timeline += (f'<div style="border-left:3px solid {script_border};padding:4px 10px;margin:3px 0;'
+                         f'font-size:0.78rem;color:{muted}"><strong>Step {step.step_index} — Script:</strong> '
+                         f'{_h(intent_desc)} ({step.script_len} chars)</div>')
+        elif step.step_type == "ScriptResponse":
+            if step.error_type:
+                timeline += (f'<div style="border-left:3px solid {err_c};padding:4px 10px;margin:3px 0;'
+                             f'font-size:0.78rem;color:{err_c}"><strong>Step {step.step_index} — ERROR:</strong> '
+                             f'{_h(step.error_type)}'
+                             + (f' — {_h(step.console)}' if step.console else '') + '</div>')
+            else:
+                timeline += (f'<div style="border-left:3px solid {ok_border};padding:4px 10px;margin:3px 0;'
+                             f'font-size:0.78rem;color:{muted}"><strong>Step {step.step_index} — OK:</strong> '
+                             f'{_h(step.result or "success")}</div>')
+        elif step.step_type == "Assistant":
+            continue
+
+    return stats_bar + f'<div style="max-height:400px;overflow-y:auto">{timeline}</div>'
+
+
+def _build_category_query_table(queries_in_cat, cls_lookup_map=None):
+    """Build an HTML table with Batch/Query/Query Text/Status columns and ▶ Trajectory dropdowns."""
+    if not queries_in_cat:
+        return ""
+    dark = st.session_state.get("dark_mode", False)
+    muted = "#8b949e" if dark else "#64748b"
+    card_border = "#30363d" if dark else "#e2e8f0"
+    pass_c = "#3fb950" if dark else "#059669"
+    fail_c = "#f85149" if dark else "#dc2626"
+
+    if cls_lookup_map is None:
+        cls_lookup_map = {}
+
+    table = (
+        '<table class="agg-table"><thead><tr>'
+        '<th>Batch</th><th>Query</th><th>Query Text</th><th>Status</th>'
+        '</tr></thead><tbody>')
+
+    for b, qi, qt in queries_in_cat:
+        case = case_lookup.get((b, qi))
+        passed = case.passed if case else None
+        if passed is True:
+            status_html = f'<span style="color:{pass_c};font-weight:700">Pass</span>'
+        elif passed is False:
+            status_html = f'<span style="color:{fail_c};font-weight:700">Fail</span>'
+        else:
+            status_html = f'<span style="color:{muted}">—</span>'
+
+        table += (
+            f'<tr>'
+            f'<td style="font-size:0.82rem">{_h(b[:25])}</td>'
+            f'<td style="font-weight:600">Q{qi}</td>'
+            f'<td style="font-size:0.82rem;color:{muted};max-width:350px;overflow:hidden;'
+            f'text-overflow:ellipsis;white-space:nowrap">{_h(qt[:100])}</td>'
+            f'<td>{status_html}</td>'
+            f'</tr>')
+
+        # Inline trajectory dropdown row
+        detail_html = _build_trajectory_html(case) if case else ""
+        if detail_html:
+            table += (
+                f'<tr><td colspan="4" style="padding:0;border-bottom:1px solid {card_border}">'
+                f'<details><summary style="cursor:pointer;font-size:0.72rem;'
+                f'font-weight:600;padding:4px 12px;color:{muted}">&#9654; Trajectory</summary>'
+                f'<div style="padding:8px 12px 12px">{detail_html}</div>'
+                f'</details></td></tr>')
+
+    table += '</tbody></table>'
+    return table
+
+
 # ---------------------------------------------------------------------------
 # Chart helpers
 # ---------------------------------------------------------------------------
@@ -1324,8 +1426,8 @@ elif page == "Dashboard":
             queries_in_cat = traj_cat_queries.get(cat_name, [])
             if queries_in_cat:
                 with st.expander(f"{cat_name} — {len(queries_in_cat)} queries"):
-                    for b, qi, qt in queries_in_cat:
-                        st.markdown(f"**{b} Q{qi}** — {qt[:140]}")
+                    cat_table = _build_category_query_table(queries_in_cat)
+                    st.markdown(f'<div style="max-height:520px;overflow-y:auto">{cat_table}</div>', unsafe_allow_html=True)
 
     # ---------------------------------------------------------------
     # 3. Outcome Categories (agg-table)
@@ -1361,8 +1463,8 @@ elif page == "Dashboard":
             oq_list = outc_queries.get(ocat, [])
             if oq_list:
                 with st.expander(f"{ocat} — {len(oq_list)} queries"):
-                    for b, qi, qt in oq_list:
-                        st.markdown(f"**{b} Q{qi}** — {qt[:140]}")
+                    ocat_table = _build_category_query_table(oq_list)
+                    st.markdown(f'<div style="max-height:520px;overflow-y:auto">{ocat_table}</div>', unsafe_allow_html=True)
     elif not f_cls:
         st.success("No failures to analyze.")
     else:
